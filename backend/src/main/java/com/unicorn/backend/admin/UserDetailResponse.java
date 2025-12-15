@@ -59,6 +59,7 @@ public class UserDetailResponse {
     private int startupCount;
     private boolean hasInvestorProfile;
     private boolean isInvestorVerified;
+    private boolean hasActiveSession;
 
     // Subscription Info
     private SubscriptionInfo currentSubscription;
@@ -135,7 +136,8 @@ public class UserDetailResponse {
             List<UserModerationLog> history,
             long warningCount,
             Subscription currentSubscription,
-            List<Payment> recentPayments) {
+            List<Payment> recentPayments,
+            boolean hasActiveSession) {
 
         UserDetailResponseBuilder builder = UserDetailResponse.builder()
                 .id(user.getId())
@@ -164,6 +166,7 @@ public class UserDetailResponse {
                 .hasInvestorProfile(user.getInvestorProfile() != null)
                 .isInvestorVerified(user.getInvestorProfile() != null &&
                         Boolean.TRUE.equals(user.getInvestorProfile().getIsVerified()))
+                .hasActiveSession(hasActiveSession)
                 .moderationHistory(history.stream()
                         .map(ModerationLogResponse::fromEntity)
                         .toList());

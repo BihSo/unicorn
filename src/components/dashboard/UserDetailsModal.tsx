@@ -114,7 +114,10 @@ export function UserDetailsModal({ userId, open, onOpenChange, onAction }: UserD
         setLoading(true)
         try {
             const response = await api.get(`/admin/users/${userId}/details`)
-            setUserDetails(response.data)
+            const data = response.data as UserDetails
+            console.log('User Details API Response:', data)
+            console.log('hasActiveSession value:', data.hasActiveSession, 'type:', typeof data.hasActiveSession)
+            setUserDetails(data)
         } catch (error) {
             console.error('Failed to fetch user details:', error)
             toast.error('Failed to load user details')

@@ -48,12 +48,18 @@ public class UserModerationService {
                 // Get recent payments
                 List<Payment> recentPayments = paymentRepository.findTop10ByUserIdOrderByTimestampDesc(userId);
 
+                // Check for active sessions
+                boolean hasActiveSession = refreshTokenRepository.findByUserId(userId)
+                                .stream()
+                                .anyMatch(token -> token.getExpiryDate().isAfter(java.time.Instant.now()));
+
                 return UserDetailResponse.fromEntity(
                                 user,
                                 moderationHistory,
                                 warningCount,
                                 currentSubscription.orElse(null),
-                                recentPayments);
+                                recentPayments,
+                                hasActiveSession);
         }
 
         /**

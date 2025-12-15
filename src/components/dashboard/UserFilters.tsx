@@ -64,9 +64,9 @@ interface UserFiltersProps {
     onClear: () => void
 }
 
-const ROLES = ['USER', 'ADMIN', 'INVESTOR', 'STARTUP_OWNER'] as const
-const STATUSES = ['ACTIVE', 'SUSPENDED', 'BANNED', 'DELETED', 'PENDING'] as const
-const AUTH_PROVIDERS = ['LOCAL', 'GOOGLE', 'FACEBOOK', 'GITHUB'] as const
+const ROLES = ['ADMIN', 'INVESTOR', 'STARTUP_OWNER'] as const
+const STATUSES = ['ACTIVE', 'SUSPENDED', 'BANNED', 'DELETED'] as const
+const AUTH_PROVIDERS = ['LOCAL', 'GOOGLE'] as const
 
 // Helper component for filter row with negate toggle
 const FilterRow = ({
@@ -74,13 +74,15 @@ const FilterRow = ({
     icon: Icon,
     children,
     negateValue,
-    onNegateChange
+    onNegateChange,
+    hasValue
 }: {
     label: string
     icon: React.ElementType
     children: React.ReactNode
     negateValue?: boolean
     onNegateChange: (checked: boolean) => void
+    hasValue?: boolean
 }) => (
     <div className="space-y-2">
         <div className="flex items-center justify-between">
@@ -97,7 +99,11 @@ const FilterRow = ({
                 />
             </div>
         </div>
-        <div className={cn(negateValue && "ring-2 ring-red-500/30 rounded-md")}>
+        <div className={cn(
+            "transition-all duration-200",
+            hasValue && negateValue && "ring-2 ring-red-500/50 rounded-md",
+            hasValue && !negateValue && "ring-2 ring-green-500/50 rounded-md"
+        )}>
             {children}
         </div>
     </div>
@@ -148,6 +154,7 @@ export function UserFilters({ filters, onFiltersChange, onApply, onClear }: User
                                 icon={Mail}
                                 negateValue={filters.emailNegate}
                                 onNegateChange={(checked) => updateFilter('emailNegate', checked)}
+                                hasValue={!!filters.email}
                             >
                                 <Input
                                     placeholder="Search email..."
@@ -161,6 +168,7 @@ export function UserFilters({ filters, onFiltersChange, onApply, onClear }: User
                                 icon={User}
                                 negateValue={filters.usernameNegate}
                                 onNegateChange={(checked) => updateFilter('usernameNegate', checked)}
+                                hasValue={!!filters.username}
                             >
                                 <Input
                                     placeholder="Search username..."
@@ -174,6 +182,7 @@ export function UserFilters({ filters, onFiltersChange, onApply, onClear }: User
                                 icon={User}
                                 negateValue={filters.firstNameNegate}
                                 onNegateChange={(checked) => updateFilter('firstNameNegate', checked)}
+                                hasValue={!!filters.firstName}
                             >
                                 <Input
                                     placeholder="Search first name..."
@@ -187,6 +196,7 @@ export function UserFilters({ filters, onFiltersChange, onApply, onClear }: User
                                 icon={User}
                                 negateValue={filters.lastNameNegate}
                                 onNegateChange={(checked) => updateFilter('lastNameNegate', checked)}
+                                hasValue={!!filters.lastName}
                             >
                                 <Input
                                     placeholder="Search last name..."
@@ -200,6 +210,7 @@ export function UserFilters({ filters, onFiltersChange, onApply, onClear }: User
                                 icon={User}
                                 negateValue={filters.displayNameNegate}
                                 onNegateChange={(checked) => updateFilter('displayNameNegate', checked)}
+                                hasValue={!!filters.displayName}
                             >
                                 <Input
                                     placeholder="Search name..."
@@ -213,6 +224,7 @@ export function UserFilters({ filters, onFiltersChange, onApply, onClear }: User
                                 icon={Globe}
                                 negateValue={filters.countryNegate}
                                 onNegateChange={(checked) => updateFilter('countryNegate', checked)}
+                                hasValue={!!filters.country}
                             >
                                 <Input
                                     placeholder="Search country..."
@@ -234,6 +246,7 @@ export function UserFilters({ filters, onFiltersChange, onApply, onClear }: User
                                 icon={Shield}
                                 negateValue={filters.roleNegate}
                                 onNegateChange={(checked) => updateFilter('roleNegate', checked)}
+                                hasValue={!!filters.role}
                             >
                                 <Select
                                     value={filters.role || '__ALL__'}
@@ -256,6 +269,7 @@ export function UserFilters({ filters, onFiltersChange, onApply, onClear }: User
                                 icon={Ban}
                                 negateValue={filters.statusNegate}
                                 onNegateChange={(checked) => updateFilter('statusNegate', checked)}
+                                hasValue={!!filters.status}
                             >
                                 <Select
                                     value={filters.status || '__ALL__'}
@@ -278,6 +292,7 @@ export function UserFilters({ filters, onFiltersChange, onApply, onClear }: User
                                 icon={Shield}
                                 negateValue={filters.authProviderNegate}
                                 onNegateChange={(checked) => updateFilter('authProviderNegate', checked)}
+                                hasValue={!!filters.authProvider}
                             >
                                 <Select
                                     value={filters.authProvider || '__ALL__'}
@@ -308,6 +323,7 @@ export function UserFilters({ filters, onFiltersChange, onApply, onClear }: User
                                 icon={Calendar}
                                 negateValue={filters.createdAtNegate}
                                 onNegateChange={(checked) => updateFilter('createdAtNegate', checked)}
+                                hasValue={!!(filters.createdAtFrom || filters.createdAtTo)}
                             >
                                 <div className="flex gap-2">
                                     <Input
@@ -332,6 +348,7 @@ export function UserFilters({ filters, onFiltersChange, onApply, onClear }: User
                                 icon={Calendar}
                                 negateValue={filters.lastLoginNegate}
                                 onNegateChange={(checked) => updateFilter('lastLoginNegate', checked)}
+                                hasValue={!!(filters.lastLoginFrom || filters.lastLoginTo)}
                             >
                                 <div className="flex gap-2">
                                     <Input
@@ -361,32 +378,22 @@ export function UserFilters({ filters, onFiltersChange, onApply, onClear }: User
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <div className="flex items-center justify-between p-3 border rounded-lg">
                                 <div className="flex items-center gap-2">
-                                    <Briefcase className="h-4 w-4 text-muted-foreground" />
+                                    <User className="h-4 w-4 text-muted-foreground" />
                                     <span className="text-sm">Has Investor Profile</span>
                                 </div>
-                                <div className="flex items-center gap-2">
-                                    <Switch
-                                        checked={filters.hasInvestorProfileNegate || false}
-                                        onCheckedChange={(checked) => updateFilter('hasInvestorProfileNegate', checked)}
-                                        className="scale-75"
-                                    />
-                                    <span className="text-xs text-muted-foreground w-8">
-                                        {filters.hasInvestorProfileNegate ? 'NOT' : ''}
-                                    </span>
-                                    <Select
-                                        value={filters.hasInvestorProfile === undefined ? '__ANY__' : String(filters.hasInvestorProfile)}
-                                        onValueChange={(value) => updateFilter('hasInvestorProfile', value === '__ANY__' ? undefined : value === 'true')}
-                                    >
-                                        <SelectTrigger className="w-24">
-                                            <SelectValue placeholder="Any" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="__ANY__">Any</SelectItem>
-                                            <SelectItem value="true">Yes</SelectItem>
-                                            <SelectItem value="false">No</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                </div>
+                                <Select
+                                    value={filters.hasInvestorProfile === undefined ? '__ANY__' : String(filters.hasInvestorProfile)}
+                                    onValueChange={(value) => updateFilter('hasInvestorProfile', value === '__ANY__' ? undefined : value === 'true')}
+                                >
+                                    <SelectTrigger className="w-24">
+                                        <SelectValue placeholder="Any" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="__ANY__">Any</SelectItem>
+                                        <SelectItem value="true">Yes</SelectItem>
+                                        <SelectItem value="false">No</SelectItem>
+                                    </SelectContent>
+                                </Select>
                             </div>
 
                             <div className="flex items-center justify-between p-3 border rounded-lg">
@@ -394,29 +401,19 @@ export function UserFilters({ filters, onFiltersChange, onApply, onClear }: User
                                     <Briefcase className="h-4 w-4 text-muted-foreground" />
                                     <span className="text-sm">Has Startups</span>
                                 </div>
-                                <div className="flex items-center gap-2">
-                                    <Switch
-                                        checked={filters.hasStartupsNegate || false}
-                                        onCheckedChange={(checked) => updateFilter('hasStartupsNegate', checked)}
-                                        className="scale-75"
-                                    />
-                                    <span className="text-xs text-muted-foreground w-8">
-                                        {filters.hasStartupsNegate ? 'NOT' : ''}
-                                    </span>
-                                    <Select
-                                        value={filters.hasStartups === undefined ? '__ANY__' : String(filters.hasStartups)}
-                                        onValueChange={(value) => updateFilter('hasStartups', value === '__ANY__' ? undefined : value === 'true')}
-                                    >
-                                        <SelectTrigger className="w-24">
-                                            <SelectValue placeholder="Any" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="__ANY__">Any</SelectItem>
-                                            <SelectItem value="true">Yes</SelectItem>
-                                            <SelectItem value="false">No</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                </div>
+                                <Select
+                                    value={filters.hasStartups === undefined ? '__ANY__' : String(filters.hasStartups)}
+                                    onValueChange={(value) => updateFilter('hasStartups', value === '__ANY__' ? undefined : value === 'true')}
+                                >
+                                    <SelectTrigger className="w-24">
+                                        <SelectValue placeholder="Any" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="__ANY__">Any</SelectItem>
+                                        <SelectItem value="true">Yes</SelectItem>
+                                        <SelectItem value="false">No</SelectItem>
+                                    </SelectContent>
+                                </Select>
                             </div>
 
                             <div className="flex items-center justify-between p-3 border rounded-lg">
@@ -424,29 +421,19 @@ export function UserFilters({ filters, onFiltersChange, onApply, onClear }: User
                                     <Ban className="h-4 w-4 text-muted-foreground" />
                                     <span className="text-sm">Is Suspended</span>
                                 </div>
-                                <div className="flex items-center gap-2">
-                                    <Switch
-                                        checked={filters.isSuspendedNegate || false}
-                                        onCheckedChange={(checked) => updateFilter('isSuspendedNegate', checked)}
-                                        className="scale-75"
-                                    />
-                                    <span className="text-xs text-muted-foreground w-8">
-                                        {filters.isSuspendedNegate ? 'NOT' : ''}
-                                    </span>
-                                    <Select
-                                        value={filters.isSuspended === undefined ? '__ANY__' : String(filters.isSuspended)}
-                                        onValueChange={(value) => updateFilter('isSuspended', value === '__ANY__' ? undefined : value === 'true')}
-                                    >
-                                        <SelectTrigger className="w-24">
-                                            <SelectValue placeholder="Any" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="__ANY__">Any</SelectItem>
-                                            <SelectItem value="true">Yes</SelectItem>
-                                            <SelectItem value="false">No</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                </div>
+                                <Select
+                                    value={filters.isSuspended === undefined ? '__ANY__' : String(filters.isSuspended)}
+                                    onValueChange={(value) => updateFilter('isSuspended', value === '__ANY__' ? undefined : value === 'true')}
+                                >
+                                    <SelectTrigger className="w-24">
+                                        <SelectValue placeholder="Any" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="__ANY__">Any</SelectItem>
+                                        <SelectItem value="true">Yes</SelectItem>
+                                        <SelectItem value="false">No</SelectItem>
+                                    </SelectContent>
+                                </Select>
                             </div>
 
                             <div className="flex items-center justify-between p-3 border rounded-lg">
@@ -454,29 +441,19 @@ export function UserFilters({ filters, onFiltersChange, onApply, onClear }: User
                                     <Shield className="h-4 w-4 text-muted-foreground" />
                                     <span className="text-sm">Has Active Session</span>
                                 </div>
-                                <div className="flex items-center gap-2">
-                                    <Switch
-                                        checked={filters.hasActiveSessionNegate || false}
-                                        onCheckedChange={(checked) => updateFilter('hasActiveSessionNegate', checked)}
-                                        className="scale-75"
-                                    />
-                                    <span className="text-xs text-muted-foreground w-8">
-                                        {filters.hasActiveSessionNegate ? 'NOT' : ''}
-                                    </span>
-                                    <Select
-                                        value={filters.hasActiveSession === undefined ? '__ANY__' : String(filters.hasActiveSession)}
-                                        onValueChange={(value) => updateFilter('hasActiveSession', value === '__ANY__' ? undefined : value === 'true')}
-                                    >
-                                        <SelectTrigger className="w-24">
-                                            <SelectValue placeholder="Any" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="__ANY__">Any</SelectItem>
-                                            <SelectItem value="true">Yes</SelectItem>
-                                            <SelectItem value="false">No</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                </div>
+                                <Select
+                                    value={filters.hasActiveSession === undefined ? '__ANY__' : String(filters.hasActiveSession)}
+                                    onValueChange={(value) => updateFilter('hasActiveSession', value === '__ANY__' ? undefined : value === 'true')}
+                                >
+                                    <SelectTrigger className="w-24">
+                                        <SelectValue placeholder="Any" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="__ANY__">Any</SelectItem>
+                                        <SelectItem value="true">Yes</SelectItem>
+                                        <SelectItem value="false">No</SelectItem>
+                                    </SelectContent>
+                                </Select>
                             </div>
                         </div>
 
@@ -491,6 +468,7 @@ export function UserFilters({ filters, onFiltersChange, onApply, onClear }: User
                                     icon={Shield}
                                     negateValue={filters.minWarningCountNegate}
                                     onNegateChange={(checked) => updateFilter('minWarningCountNegate', checked)}
+                                    hasValue={filters.minWarningCount !== undefined}
                                 >
                                     <Input
                                         type="number"
