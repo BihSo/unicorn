@@ -44,6 +44,60 @@ public class AuthenticationService {
                 user.setStatus("ACTIVE");
                 user.setAuthProvider("LOCAL");
 
+                // Handle Username Logic
+                String finalUsername;
+                if (request.username() != null && !request.username().trim().isEmpty()) {
+                        // User provided a username
+                        String sanitized = request.username().trim().toLowerCase();
+
+                        // Validation Regex
+                        // 1. Starts with a letter [a-z]
+                        // 2. Contains only [a-z0-9-_]
+                        // 3. No consecutive special chars [-_]
+                        String usernameRegex = "^[a-z](?!.*[-_]{2})[a-z0-9-_]*$";
+
+                        if (!sanitized.matches(usernameRegex)) {
+                                throw new IllegalArgumentException(
+                                                "Username must start with a letter, contain only lowercase letters, numbers, dashes, or underscores, and cannot have consecutive special characters.");
+                        }
+
+                        if (userRepository.existsByUsername(sanitized)) {
+                                throw new IllegalArgumentException("Username already exists");
+                        }
+                        finalUsername = sanitized;
+                } else {
+                        // Generate username from email prefix
+                        String emailPrefix = request.email().split("@")[0].toLowerCase();
+
+                        // Sanitize for generation: replace dots with underscore, remove invalid chars
+                        String base = emailPrefix.replace(".", "_").replaceAll("[^a-z0-9-_]", "");
+
+                        // Ensure starts with letter
+                        if (base.isEmpty() || !base.matches("^[a-z].*")) {
+                                base = "u" + base;
+                        }
+
+                        // Fix consecutive special chars
+                        base = base.replaceAll("[-_]{2,}", "_");
+
+                        finalUsername = base;
+
+                        // If generated username exists, append numbers until unique
+                        if (userRepository.existsByUsername(finalUsername)) {
+                                int attempts = 0;
+                                while (userRepository.existsByUsername(finalUsername) && attempts < 10) {
+                                        String randomSuffix = String.valueOf((int) (Math.random() * 1000));
+                                        finalUsername = base + randomSuffix;
+                                        attempts++;
+                                }
+                                // Fallback purely random if still colliding
+                                if (userRepository.existsByUsername(finalUsername)) {
+                                        finalUsername = base + System.currentTimeMillis();
+                                }
+                        }
+                }
+                user.setUsername(finalUsername);
+
                 userRepository.save(user);
 
                 // Auto-login after register

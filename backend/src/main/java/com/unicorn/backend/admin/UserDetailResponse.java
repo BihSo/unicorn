@@ -28,6 +28,9 @@ public class UserDetailResponse {
     // Basic Info
     private UUID id;
     private String email;
+    private String username;
+    private String firstName;
+    private String lastName;
     private String displayName;
     private String phoneNumber;
     private String country;
@@ -137,6 +140,9 @@ public class UserDetailResponse {
         UserDetailResponseBuilder builder = UserDetailResponse.builder()
                 .id(user.getId())
                 .email(user.getEmail())
+                .username(user.getUsername())
+                .firstName(user.getFirstName())
+                .lastName(user.getLastName())
                 .displayName(user.getDisplayName())
                 .phoneNumber(user.getPhoneNumber())
                 .country(user.getCountry())

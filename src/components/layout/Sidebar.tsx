@@ -40,7 +40,7 @@ export function Sidebar() {
             {/* Sidebar */}
             <aside
                 className={cn(
-                    "fixed left-0 top-0 h-screen w-64 glass border-r border-border transition-transform duration-300 ease-in-out z-40",
+                    "fixed left-0 top-0 h-screen w-64 bg-card border-r border-border transition-transform duration-300 ease-in-out z-40 shadow-xl",
                     isMobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
                 )}
             >

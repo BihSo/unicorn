@@ -28,8 +28,9 @@ public class SecurityAdminController {
      */
     @GetMapping("/{userId}/sessions")
     public ResponseEntity<List<SessionResponse>> getUserSessions(@PathVariable UUID userId) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+        if (!userRepository.existsById(userId)) {
+            throw new RuntimeException("User not found");
+        }
 
         List<RefreshToken> tokens = refreshTokenRepository.findByUserId(userId);
 

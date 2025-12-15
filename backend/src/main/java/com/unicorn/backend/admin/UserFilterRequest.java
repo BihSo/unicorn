@@ -21,6 +21,15 @@ public class UserFilterRequest {
     private String email;
     private Boolean emailNegate;
 
+    private String username;
+    private Boolean usernameNegate;
+
+    private String firstName;
+    private Boolean firstNameNegate;
+
+    private String lastName;
+    private Boolean lastNameNegate;
+
     private String displayName;
     private Boolean displayNameNegate;
 
@@ -79,7 +88,8 @@ public class UserFilterRequest {
      * Check if any filter is active.
      */
     public boolean hasAnyFilter() {
-        return email != null || displayName != null || phoneNumber != null || country != null ||
+        return email != null || username != null || firstName != null || lastName != null ||
+                displayName != null || phoneNumber != null || country != null ||
                 role != null || status != null || authProvider != null || suspensionType != null ||
                 createdAtFrom != null || createdAtTo != null ||
                 lastLoginFrom != null || lastLoginTo != null ||

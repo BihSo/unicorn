@@ -13,7 +13,16 @@ public record UserResponse(
                 LocalDateTime lastLoginAt,
                 LocalDateTime suspendedAt,
                 LocalDateTime suspendedUntil,
-                String suspensionType) {
+                String suspensionType,
+                String username,
+                String firstName,
+                String lastName,
+                String displayName,
+                String phoneNumber,
+                String country,
+                String suspendReason,
+                boolean hasInvestorProfile,
+                boolean hasStartups) {
 
         public static UserResponse fromEntity(User user) {
                 return new UserResponse(
@@ -26,6 +35,15 @@ public record UserResponse(
                                 user.getLastLoginAt(),
                                 user.getSuspendedAt(),
                                 user.getSuspendedUntil(),
-                                user.getSuspensionType());
+                                user.getSuspensionType(),
+                                user.getUsername(),
+                                user.getFirstName(),
+                                user.getLastName(),
+                                user.getDisplayName(),
+                                user.getPhoneNumber(),
+                                user.getCountry(),
+                                user.getSuspendReason(),
+                                user.getInvestorProfile() != null,
+                                user.getStartups() != null && !user.getStartups().isEmpty());
         }
 }

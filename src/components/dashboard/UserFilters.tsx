@@ -15,6 +15,12 @@ export interface FilterState {
     // Text filters
     email?: string
     emailNegate?: boolean
+    username?: string
+    usernameNegate?: boolean
+    firstName?: string
+    firstNameNegate?: boolean
+    lastName?: string
+    lastNameNegate?: boolean
     displayName?: string
     displayNameNegate?: boolean
     country?: string
@@ -151,6 +157,45 @@ export function UserFilters({ filters, onFiltersChange, onApply, onClear }: User
                             </FilterRow>
 
                             <FilterRow
+                                label="Username"
+                                icon={User}
+                                negateValue={filters.usernameNegate}
+                                onNegateChange={(checked) => updateFilter('usernameNegate', checked)}
+                            >
+                                <Input
+                                    placeholder="Search username..."
+                                    value={filters.username || ''}
+                                    onChange={(e) => updateFilter('username', e.target.value || undefined)}
+                                />
+                            </FilterRow>
+
+                            <FilterRow
+                                label="First Name"
+                                icon={User}
+                                negateValue={filters.firstNameNegate}
+                                onNegateChange={(checked) => updateFilter('firstNameNegate', checked)}
+                            >
+                                <Input
+                                    placeholder="Search first name..."
+                                    value={filters.firstName || ''}
+                                    onChange={(e) => updateFilter('firstName', e.target.value || undefined)}
+                                />
+                            </FilterRow>
+
+                            <FilterRow
+                                label="Last Name"
+                                icon={User}
+                                negateValue={filters.lastNameNegate}
+                                onNegateChange={(checked) => updateFilter('lastNameNegate', checked)}
+                            >
+                                <Input
+                                    placeholder="Search last name..."
+                                    value={filters.lastName || ''}
+                                    onChange={(e) => updateFilter('lastName', e.target.value || undefined)}
+                                />
+                            </FilterRow>
+
+                            <FilterRow
                                 label="Display Name"
                                 icon={User}
                                 negateValue={filters.displayNameNegate}
@@ -270,12 +315,14 @@ export function UserFilters({ filters, onFiltersChange, onApply, onClear }: User
                                         placeholder="From"
                                         value={filters.createdAtFrom || ''}
                                         onChange={(e) => updateFilter('createdAtFrom', e.target.value || undefined)}
+                                        className="dark:text-white dark:[color-scheme:dark]"
                                     />
                                     <Input
                                         type="date"
                                         placeholder="To"
                                         value={filters.createdAtTo || ''}
                                         onChange={(e) => updateFilter('createdAtTo', e.target.value || undefined)}
+                                        className="dark:text-white dark:[color-scheme:dark]"
                                     />
                                 </div>
                             </FilterRow>
@@ -292,12 +339,14 @@ export function UserFilters({ filters, onFiltersChange, onApply, onClear }: User
                                         placeholder="From"
                                         value={filters.lastLoginFrom || ''}
                                         onChange={(e) => updateFilter('lastLoginFrom', e.target.value || undefined)}
+                                        className="dark:text-white dark:[color-scheme:dark]"
                                     />
                                     <Input
                                         type="date"
                                         placeholder="To"
                                         value={filters.lastLoginTo || ''}
                                         onChange={(e) => updateFilter('lastLoginTo', e.target.value || undefined)}
+                                        className="dark:text-white dark:[color-scheme:dark]"
                                     />
                                 </div>
                             </FilterRow>

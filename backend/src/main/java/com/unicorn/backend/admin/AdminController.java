@@ -48,6 +48,12 @@ public class AdminController {
             // Advanced Filters
             @org.springframework.web.bind.annotation.RequestParam(required = false) String email,
             @org.springframework.web.bind.annotation.RequestParam(required = false) Boolean emailNegate,
+            @org.springframework.web.bind.annotation.RequestParam(required = false) String username,
+            @org.springframework.web.bind.annotation.RequestParam(required = false) Boolean usernameNegate,
+            @org.springframework.web.bind.annotation.RequestParam(required = false) String firstName,
+            @org.springframework.web.bind.annotation.RequestParam(required = false) Boolean firstNameNegate,
+            @org.springframework.web.bind.annotation.RequestParam(required = false) String lastName,
+            @org.springframework.web.bind.annotation.RequestParam(required = false) Boolean lastNameNegate,
             @org.springframework.web.bind.annotation.RequestParam(required = false) String displayName,
             @org.springframework.web.bind.annotation.RequestParam(required = false) Boolean displayNameNegate,
             @org.springframework.web.bind.annotation.RequestParam(required = false) String country,
@@ -70,22 +76,34 @@ public class AdminController {
             @org.springframework.web.bind.annotation.RequestParam(required = false) Boolean hasStartupsNegate,
             @org.springframework.web.bind.annotation.RequestParam(required = false) Boolean isSuspended,
             @org.springframework.web.bind.annotation.RequestParam(required = false) Boolean isSuspendedNegate,
+            @org.springframework.web.bind.annotation.RequestParam(required = false) Integer minWarningCount,
+            @org.springframework.web.bind.annotation.RequestParam(required = false) Boolean minWarningCountNegate,
+            @org.springframework.web.bind.annotation.RequestParam(required = false) Boolean hasActiveSession,
+            @org.springframework.web.bind.annotation.RequestParam(required = false) Boolean hasActiveSessionNegate,
             @PageableDefault(page = 0, size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
 
         try {
             Page<User> usersPage;
 
             // Check if we have advanced filters (not just the simple query)
-            boolean hasAdvancedFilters = email != null || displayName != null || country != null ||
+            boolean hasAdvancedFilters = email != null || username != null ||
+                    firstName != null || lastName != null ||
                     role != null || status != null || authProvider != null ||
                     createdAtFrom != null || createdAtTo != null ||
                     lastLoginFrom != null || lastLoginTo != null ||
-                    hasInvestorProfile != null || hasStartups != null || isSuspended != null;
+                    hasInvestorProfile != null || hasStartups != null || isSuspended != null ||
+                    minWarningCount != null || hasActiveSession != null;
 
             if (hasAdvancedFilters) {
                 UserFilterRequest filter = UserFilterRequest.builder()
                         .email(email)
                         .emailNegate(emailNegate)
+                        .username(username)
+                        .usernameNegate(usernameNegate)
+                        .firstName(firstName)
+                        .firstNameNegate(firstNameNegate)
+                        .lastName(lastName)
+                        .lastNameNegate(lastNameNegate)
                         .displayName(displayName)
                         .displayNameNegate(displayNameNegate)
                         .country(country)
@@ -108,6 +126,10 @@ public class AdminController {
                         .hasStartupsNegate(hasStartupsNegate)
                         .isSuspended(isSuspended)
                         .isSuspendedNegate(isSuspendedNegate)
+                        .minWarningCount(minWarningCount)
+                        .minWarningCountNegate(minWarningCountNegate)
+                        .hasActiveSession(hasActiveSession)
+                        .hasActiveSessionNegate(hasActiveSessionNegate)
                         .build();
 
                 usersPage = userRepository.findAll(UserSpecification.buildSpecification(filter), pageable);
@@ -168,7 +190,6 @@ public class AdminController {
         stats.put("investors", investorStats);
 
         // Startups
-        long startupsCount = userRepository.countByRole("STARTUP_OWNER"); // Or count from StartupRepository directly?
         // Using StartupRepository countByStatus is better for actual startups
         // But logic says "Startups" box usually means Startup Users or Startup
         // profiles.

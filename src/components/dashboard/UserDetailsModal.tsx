@@ -27,7 +27,11 @@ interface UserDetailsModalProps {
 
 interface UserDetails {
     id: string
+    id: string
     email: string
+    username?: string
+    firstName?: string
+    lastName?: string
     displayName?: string
     phoneNumber?: string
     country?: string
@@ -242,7 +246,10 @@ export function UserDetailsModal({ userId, open, onOpenChange, onAction }: UserD
                                 <div className="space-y-4">
                                     {/* Contact Info */}
                                     <div className="grid grid-cols-2 gap-4">
+                                        <InfoRow icon={User} label="Username" value={userDetails.username || userDetails.email.split('@')[0]} />
                                         <InfoRow icon={Mail} label="Email" value={userDetails.email} />
+                                        <InfoRow icon={User} label="First Name" value={userDetails.firstName || '-'} />
+                                        <InfoRow icon={User} label="Last Name" value={userDetails.lastName || '-'} />
                                         <InfoRow icon={Phone} label="Phone" value={userDetails.phoneNumber || 'Not provided'} />
                                         <InfoRow icon={MapPin} label="Country" value={userDetails.country || 'Not specified'} />
                                         <InfoRow icon={Shield} label="Auth Provider" value={userDetails.authProvider} />

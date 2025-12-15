@@ -87,7 +87,7 @@ export function UserManagement() {
                     iconColor="text-orange-500"
                     details={
                         <div className="text-sm text-muted-foreground">
-                            <span className="font-semibold text-green-500">● {stats.active.onlineNow}</span> online now
+                            <span className="font-semibold text-green-500">● {stats.active.onlineNow}</span> active sessions
                         </div>
                     }
                 />

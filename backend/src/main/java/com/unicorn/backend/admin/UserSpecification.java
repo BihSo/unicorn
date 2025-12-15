@@ -24,6 +24,15 @@ public class UserSpecification {
             addTextFilter(predicates, criteriaBuilder, root.get("email"),
                     filter.getEmail(), filter.getEmailNegate());
 
+            addTextFilter(predicates, criteriaBuilder, root.get("username"),
+                    filter.getUsername(), filter.getUsernameNegate());
+
+            addTextFilter(predicates, criteriaBuilder, root.get("firstName"),
+                    filter.getFirstName(), filter.getFirstNameNegate());
+
+            addTextFilter(predicates, criteriaBuilder, root.get("lastName"),
+                    filter.getLastName(), filter.getLastNameNegate());
+
             addTextFilter(predicates, criteriaBuilder, root.get("displayName"),
                     filter.getDisplayName(), filter.getDisplayNameNegate());
 
