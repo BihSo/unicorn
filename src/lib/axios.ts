@@ -80,6 +80,9 @@ api.interceptors.response.use(
                     localStorage.setItem('refreshToken', newRefreshToken);
                 }
 
+                // Notify the application that the token has been refreshed
+                window.dispatchEvent(new Event('token-refreshed'));
+
                 // Process the queue with the new token
                 processQueue(null, accessToken);
 

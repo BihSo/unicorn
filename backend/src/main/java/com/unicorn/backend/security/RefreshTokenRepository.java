@@ -18,6 +18,10 @@ public interface RefreshTokenRepository extends JpaRepository<RefreshToken, Long
     // Actually, JPA method names:
     List<RefreshToken> findByUserId(UUID userId);
 
+    @org.springframework.data.jpa.repository.Query("SELECT COUNT(DISTINCT r.user) FROM RefreshToken r WHERE r.expiryDate > :date")
+    long countDistinctUserByExpiryDateAfter(
+            @org.springframework.data.repository.query.Param("date") java.time.Instant date);
+
     @Modifying
     void deleteByToken(String token);
 

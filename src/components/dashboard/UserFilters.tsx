@@ -1,0 +1,473 @@
+import { useState } from 'react'
+import { Button } from '../ui/button'
+import { Input } from '../ui/input'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select'
+import { Card, CardContent, CardHeader, CardTitle } from '../ui/card'
+import { Label } from '../ui/label'
+import { Switch } from '../ui/switch'
+import {
+    Filter, ChevronDown, ChevronUp, RotateCcw,
+    Ban, User, Mail, Globe, Shield, Calendar, Briefcase
+} from 'lucide-react'
+import { cn } from '../../lib/utils'
+
+export interface FilterState {
+    // Text filters
+    email?: string
+    emailNegate?: boolean
+    displayName?: string
+    displayNameNegate?: boolean
+    country?: string
+    countryNegate?: boolean
+
+    // Select filters
+    role?: string
+    roleNegate?: boolean
+    status?: string
+    statusNegate?: boolean
+    authProvider?: string
+    authProviderNegate?: boolean
+
+    // Date filters
+    createdAtFrom?: string
+    createdAtTo?: string
+    createdAtNegate?: boolean
+    lastLoginFrom?: string
+    lastLoginTo?: string
+    lastLoginNegate?: boolean
+
+    // Boolean filters
+    hasInvestorProfile?: boolean
+    hasInvestorProfileNegate?: boolean
+    hasStartups?: boolean
+    hasStartupsNegate?: boolean
+    isSuspended?: boolean
+    isSuspendedNegate?: boolean
+
+    // New additions
+    minWarningCount?: number
+    minWarningCountNegate?: boolean
+    hasActiveSession?: boolean
+    hasActiveSessionNegate?: boolean
+}
+
+interface UserFiltersProps {
+    filters: FilterState
+    onFiltersChange: (filters: FilterState) => void
+    onApply: () => void
+    onClear: () => void
+}
+
+const ROLES = ['USER', 'ADMIN', 'INVESTOR', 'STARTUP_OWNER'] as const
+const STATUSES = ['ACTIVE', 'SUSPENDED', 'BANNED', 'DELETED', 'PENDING'] as const
+const AUTH_PROVIDERS = ['LOCAL', 'GOOGLE', 'FACEBOOK', 'GITHUB'] as const
+
+// Helper component for filter row with negate toggle
+const FilterRow = ({
+    label,
+    icon: Icon,
+    children,
+    negateValue,
+    onNegateChange
+}: {
+    label: string
+    icon: React.ElementType
+    children: React.ReactNode
+    negateValue?: boolean
+    onNegateChange: (checked: boolean) => void
+}) => (
+    <div className="space-y-2">
+        <div className="flex items-center justify-between">
+            <Label className="flex items-center gap-2 text-sm">
+                <Icon className="h-4 w-4 text-muted-foreground" />
+                {label}
+            </Label>
+            <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground">Exclude</span>
+                <Switch
+                    checked={negateValue || false}
+                    onCheckedChange={onNegateChange}
+                    className="scale-75"
+                />
+            </div>
+        </div>
+        <div className={cn(negateValue && "ring-2 ring-red-500/30 rounded-md")}>
+            {children}
+        </div>
+    </div>
+)
+
+export function UserFilters({ filters, onFiltersChange, onApply, onClear }: UserFiltersProps) {
+    const [expanded, setExpanded] = useState(false)
+
+    const updateFilter = <K extends keyof FilterState>(key: K, value: FilterState[K]) => {
+        onFiltersChange({ ...filters, [key]: value })
+    }
+
+    const activeFilterCount = Object.entries(filters).filter(([key, value]) => {
+        if (key.endsWith('Negate')) return false
+        return value !== undefined && value !== '' && value !== null
+    }).length
+
+    return (
+        <Card className="mb-4">
+            <CardHeader
+                className="py-3 px-4 cursor-pointer hover:bg-muted/50 transition-colors"
+                onClick={() => setExpanded(!expanded)}
+            >
+                <div className="flex items-center justify-between">
+                    <CardTitle className="text-sm font-medium flex items-center gap-2">
+                        <Filter className="h-4 w-4" />
+                        Advanced Filters
+                        {activeFilterCount > 0 && (
+                            <span className="ml-2 px-2 py-0.5 text-xs bg-primary text-primary-foreground rounded-full">
+                                {activeFilterCount} active
+                            </span>
+                        )}
+                    </CardTitle>
+                    {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                </div>
+            </CardHeader>
+
+            {expanded && (
+                <CardContent className="pt-0 pb-4 space-y-6">
+                    {/* Text Filters Section */}
+                    <div className="space-y-4">
+                        <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                            Text Filters
+                        </h4>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <FilterRow
+                                label="Email"
+                                icon={Mail}
+                                negateValue={filters.emailNegate}
+                                onNegateChange={(checked) => updateFilter('emailNegate', checked)}
+                            >
+                                <Input
+                                    placeholder="Search email..."
+                                    value={filters.email || ''}
+                                    onChange={(e) => updateFilter('email', e.target.value || undefined)}
+                                />
+                            </FilterRow>
+
+                            <FilterRow
+                                label="Display Name"
+                                icon={User}
+                                negateValue={filters.displayNameNegate}
+                                onNegateChange={(checked) => updateFilter('displayNameNegate', checked)}
+                            >
+                                <Input
+                                    placeholder="Search name..."
+                                    value={filters.displayName || ''}
+                                    onChange={(e) => updateFilter('displayName', e.target.value || undefined)}
+                                />
+                            </FilterRow>
+
+                            <FilterRow
+                                label="Country"
+                                icon={Globe}
+                                negateValue={filters.countryNegate}
+                                onNegateChange={(checked) => updateFilter('countryNegate', checked)}
+                            >
+                                <Input
+                                    placeholder="Search country..."
+                                    value={filters.country || ''}
+                                    onChange={(e) => updateFilter('country', e.target.value || undefined)}
+                                />
+                            </FilterRow>
+                        </div>
+                    </div>
+
+                    {/* Select Filters Section */}
+                    <div className="space-y-4">
+                        <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                            Role & Status
+                        </h4>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <FilterRow
+                                label="Role"
+                                icon={Shield}
+                                negateValue={filters.roleNegate}
+                                onNegateChange={(checked) => updateFilter('roleNegate', checked)}
+                            >
+                                <Select
+                                    value={filters.role || '__ALL__'}
+                                    onValueChange={(value) => updateFilter('role', value === '__ALL__' ? undefined : value)}
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="All roles" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="__ALL__">All roles</SelectItem>
+                                        {ROLES.map(role => (
+                                            <SelectItem key={role} value={role}>{role}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </FilterRow>
+
+                            <FilterRow
+                                label="Status"
+                                icon={Ban}
+                                negateValue={filters.statusNegate}
+                                onNegateChange={(checked) => updateFilter('statusNegate', checked)}
+                            >
+                                <Select
+                                    value={filters.status || '__ALL__'}
+                                    onValueChange={(value) => updateFilter('status', value === '__ALL__' ? undefined : value)}
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="All statuses" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="__ALL__">All statuses</SelectItem>
+                                        {STATUSES.map(status => (
+                                            <SelectItem key={status} value={status}>{status}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </FilterRow>
+
+                            <FilterRow
+                                label="Auth Provider"
+                                icon={Shield}
+                                negateValue={filters.authProviderNegate}
+                                onNegateChange={(checked) => updateFilter('authProviderNegate', checked)}
+                            >
+                                <Select
+                                    value={filters.authProvider || '__ALL__'}
+                                    onValueChange={(value) => updateFilter('authProvider', value === '__ALL__' ? undefined : value)}
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="All providers" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="__ALL__">All providers</SelectItem>
+                                        {AUTH_PROVIDERS.map(provider => (
+                                            <SelectItem key={provider} value={provider}>{provider}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </FilterRow>
+                        </div>
+                    </div>
+
+                    {/* Date Filters Section */}
+                    <div className="space-y-4">
+                        <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                            Date Ranges
+                        </h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <FilterRow
+                                label="Created At"
+                                icon={Calendar}
+                                negateValue={filters.createdAtNegate}
+                                onNegateChange={(checked) => updateFilter('createdAtNegate', checked)}
+                            >
+                                <div className="flex gap-2">
+                                    <Input
+                                        type="date"
+                                        placeholder="From"
+                                        value={filters.createdAtFrom || ''}
+                                        onChange={(e) => updateFilter('createdAtFrom', e.target.value || undefined)}
+                                    />
+                                    <Input
+                                        type="date"
+                                        placeholder="To"
+                                        value={filters.createdAtTo || ''}
+                                        onChange={(e) => updateFilter('createdAtTo', e.target.value || undefined)}
+                                    />
+                                </div>
+                            </FilterRow>
+
+                            <FilterRow
+                                label="Last Login"
+                                icon={Calendar}
+                                negateValue={filters.lastLoginNegate}
+                                onNegateChange={(checked) => updateFilter('lastLoginNegate', checked)}
+                            >
+                                <div className="flex gap-2">
+                                    <Input
+                                        type="date"
+                                        placeholder="From"
+                                        value={filters.lastLoginFrom || ''}
+                                        onChange={(e) => updateFilter('lastLoginFrom', e.target.value || undefined)}
+                                    />
+                                    <Input
+                                        type="date"
+                                        placeholder="To"
+                                        value={filters.lastLoginTo || ''}
+                                        onChange={(e) => updateFilter('lastLoginTo', e.target.value || undefined)}
+                                    />
+                                </div>
+                            </FilterRow>
+                        </div>
+                    </div>
+
+                    {/* Boolean Filters Section */}
+                    <div className="space-y-4">
+                        <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                            User Properties
+                        </h4>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div className="flex items-center justify-between p-3 border rounded-lg">
+                                <div className="flex items-center gap-2">
+                                    <Briefcase className="h-4 w-4 text-muted-foreground" />
+                                    <span className="text-sm">Has Investor Profile</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <Switch
+                                        checked={filters.hasInvestorProfileNegate || false}
+                                        onCheckedChange={(checked) => updateFilter('hasInvestorProfileNegate', checked)}
+                                        className="scale-75"
+                                    />
+                                    <span className="text-xs text-muted-foreground w-8">
+                                        {filters.hasInvestorProfileNegate ? 'NOT' : ''}
+                                    </span>
+                                    <Select
+                                        value={filters.hasInvestorProfile === undefined ? '__ANY__' : String(filters.hasInvestorProfile)}
+                                        onValueChange={(value) => updateFilter('hasInvestorProfile', value === '__ANY__' ? undefined : value === 'true')}
+                                    >
+                                        <SelectTrigger className="w-24">
+                                            <SelectValue placeholder="Any" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="__ANY__">Any</SelectItem>
+                                            <SelectItem value="true">Yes</SelectItem>
+                                            <SelectItem value="false">No</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            </div>
+
+                            <div className="flex items-center justify-between p-3 border rounded-lg">
+                                <div className="flex items-center gap-2">
+                                    <Briefcase className="h-4 w-4 text-muted-foreground" />
+                                    <span className="text-sm">Has Startups</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <Switch
+                                        checked={filters.hasStartupsNegate || false}
+                                        onCheckedChange={(checked) => updateFilter('hasStartupsNegate', checked)}
+                                        className="scale-75"
+                                    />
+                                    <span className="text-xs text-muted-foreground w-8">
+                                        {filters.hasStartupsNegate ? 'NOT' : ''}
+                                    </span>
+                                    <Select
+                                        value={filters.hasStartups === undefined ? '__ANY__' : String(filters.hasStartups)}
+                                        onValueChange={(value) => updateFilter('hasStartups', value === '__ANY__' ? undefined : value === 'true')}
+                                    >
+                                        <SelectTrigger className="w-24">
+                                            <SelectValue placeholder="Any" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="__ANY__">Any</SelectItem>
+                                            <SelectItem value="true">Yes</SelectItem>
+                                            <SelectItem value="false">No</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            </div>
+
+                            <div className="flex items-center justify-between p-3 border rounded-lg">
+                                <div className="flex items-center gap-2">
+                                    <Ban className="h-4 w-4 text-muted-foreground" />
+                                    <span className="text-sm">Is Suspended</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <Switch
+                                        checked={filters.isSuspendedNegate || false}
+                                        onCheckedChange={(checked) => updateFilter('isSuspendedNegate', checked)}
+                                        className="scale-75"
+                                    />
+                                    <span className="text-xs text-muted-foreground w-8">
+                                        {filters.isSuspendedNegate ? 'NOT' : ''}
+                                    </span>
+                                    <Select
+                                        value={filters.isSuspended === undefined ? '__ANY__' : String(filters.isSuspended)}
+                                        onValueChange={(value) => updateFilter('isSuspended', value === '__ANY__' ? undefined : value === 'true')}
+                                    >
+                                        <SelectTrigger className="w-24">
+                                            <SelectValue placeholder="Any" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="__ANY__">Any</SelectItem>
+                                            <SelectItem value="true">Yes</SelectItem>
+                                            <SelectItem value="false">No</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            </div>
+
+                            <div className="flex items-center justify-between p-3 border rounded-lg">
+                                <div className="flex items-center gap-2">
+                                    <Shield className="h-4 w-4 text-muted-foreground" />
+                                    <span className="text-sm">Has Active Session</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <Switch
+                                        checked={filters.hasActiveSessionNegate || false}
+                                        onCheckedChange={(checked) => updateFilter('hasActiveSessionNegate', checked)}
+                                        className="scale-75"
+                                    />
+                                    <span className="text-xs text-muted-foreground w-8">
+                                        {filters.hasActiveSessionNegate ? 'NOT' : ''}
+                                    </span>
+                                    <Select
+                                        value={filters.hasActiveSession === undefined ? '__ANY__' : String(filters.hasActiveSession)}
+                                        onValueChange={(value) => updateFilter('hasActiveSession', value === '__ANY__' ? undefined : value === 'true')}
+                                    >
+                                        <SelectTrigger className="w-24">
+                                            <SelectValue placeholder="Any" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="__ANY__">Any</SelectItem>
+                                            <SelectItem value="true">Yes</SelectItem>
+                                            <SelectItem value="false">No</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Numeric Filters */}
+                        <div className="space-y-4 pt-4 border-t">
+                            <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                                Metrics
+                            </h4>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <FilterRow
+                                    label="Min Warnings"
+                                    icon={Shield}
+                                    negateValue={filters.minWarningCountNegate}
+                                    onNegateChange={(checked) => updateFilter('minWarningCountNegate', checked)}
+                                >
+                                    <Input
+                                        type="number"
+                                        min="0"
+                                        placeholder="0"
+                                        value={filters.minWarningCount || ''}
+                                        onChange={(e) => updateFilter('minWarningCount', e.target.value ? parseInt(e.target.value) : undefined)}
+                                    />
+                                </FilterRow>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="flex justify-end gap-2 pt-2 border-t">
+                        <Button variant="outline" onClick={onClear} className="gap-2">
+                            <RotateCcw className="h-4 w-4" />
+                            Clear All
+                        </Button>
+                        <Button onClick={onApply} className="gap-2">
+                            <Filter className="h-4 w-4" />
+                            Apply Filters
+                        </Button>
+                    </div>
+                </CardContent>
+            )}
+        </Card>
+    )
+}

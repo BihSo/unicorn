@@ -6,18 +6,18 @@ import api from '../lib/axios'
 import { formatNumber } from '../lib/utils'
 
 interface UserStats {
-    total: number
-    investors: number
-    startups: number
-    active: number
+    total: { value: number; newThisMonth: number }
+    investors: { value: number; verifiedCount: number }
+    startups: { value: number; totalRaised: number }
+    active: { value: number; onlineNow: number }
 }
 
 export function UserManagement() {
     const [stats, setStats] = useState<UserStats>({
-        total: 0,
-        investors: 0,
-        startups: 0,
-        active: 0
+        total: { value: 0, newThisMonth: 0 },
+        investors: { value: 0, verifiedCount: 0 },
+        startups: { value: 0, totalRaised: 0 },
+        active: { value: 0, onlineNow: 0 }
     })
     const [isLoading, setIsLoading] = useState(true)
 
@@ -49,27 +49,47 @@ export function UserManagement() {
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
                 <KPICard
                     title="Total Users"
-                    value={isLoading ? "..." : formatNumber(stats.total)}
+                    value={isLoading ? "..." : formatNumber(stats.total.value)}
                     icon={Users}
                     iconColor="text-blue-500"
+                    details={
+                        <div className="text-sm text-muted-foreground">
+                            <span className="font-semibold text-foreground">+{stats.total.newThisMonth}</span> new this month
+                        </div>
+                    }
                 />
                 <KPICard
                     title="Investors"
-                    value={isLoading ? "..." : formatNumber(stats.investors)}
+                    value={isLoading ? "..." : formatNumber(stats.investors.value)}
                     icon={Briefcase}
                     iconColor="text-emerald-500"
+                    details={
+                        <div className="text-sm text-muted-foreground">
+                            <span className="font-semibold text-foreground">{stats.investors.verifiedCount}</span> verified
+                        </div>
+                    }
                 />
                 <KPICard
                     title="Startups"
-                    value={isLoading ? "..." : formatNumber(stats.startups)}
+                    value={isLoading ? "..." : formatNumber(stats.startups.value)}
                     icon={Building2}
                     iconColor="text-purple-500"
+                    details={
+                        <div className="text-sm text-muted-foreground">
+                            <span className="font-semibold text-foreground">${formatNumber(stats.startups.totalRaised)}</span> raised total
+                        </div>
+                    }
                 />
                 <KPICard
                     title="Active Users"
-                    value={isLoading ? "..." : formatNumber(stats.active)}
+                    value={isLoading ? "..." : formatNumber(stats.active.value)}
                     icon={UserCheck}
                     iconColor="text-orange-500"
+                    details={
+                        <div className="text-sm text-muted-foreground">
+                            <span className="font-semibold text-green-500">● {stats.active.onlineNow}</span> online now
+                        </div>
+                    }
                 />
             </div>
 

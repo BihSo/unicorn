@@ -8,9 +8,10 @@ interface KPICardProps {
     icon: LucideIcon
     trend?: number
     iconColor?: string
+    details?: React.ReactNode // Slot for extra details
 }
 
-export function KPICard({ title, value, icon: Icon, trend, iconColor = "text-primary" }: KPICardProps) {
+export function KPICard({ title, value, icon: Icon, trend, iconColor = "text-primary", details }: KPICardProps) {
     const isPositive = trend ? trend > 0 : false
 
     const getBackgroundClass = (colorClass: string) => {
@@ -29,12 +30,25 @@ export function KPICard({ title, value, icon: Icon, trend, iconColor = "text-pri
     return (
         <Card className="group hover:shadow-xl transition-all duration-300 hover:-translate-y-1 border-2 hover:border-primary/50">
             <CardContent className="p-6">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between mb-4">
                     <div className="flex-1">
                         <p className="text-sm font-medium text-muted-foreground mb-1">{title}</p>
-                        <h3 className="text-3xl font-bold mb-2">{value}</h3>
+                        <h3 className="text-3xl font-bold">{value}</h3>
+                    </div>
+                    <div className={cn(
+                        "p-4 rounded-2xl transition-all duration-300 group-hover:scale-105",
+                        getBackgroundClass(iconColor),
+                        iconColor
+                    )}>
+                        <Icon className="h-8 w-8" />
+                    </div>
+                </div>
+
+                {/* Details Section */}
+                {(details || trend !== undefined) && (
+                    <div className="pt-2 border-t mt-2">
                         {trend !== undefined && (
-                            <div className="flex items-center gap-1">
+                            <div className="flex items-center gap-1 mb-1">
                                 <span
                                     className={cn(
                                         "text-sm font-semibold",
@@ -46,15 +60,9 @@ export function KPICard({ title, value, icon: Icon, trend, iconColor = "text-pri
                                 <span className="text-xs text-muted-foreground">vs last month</span>
                             </div>
                         )}
+                        {details}
                     </div>
-                    <div className={cn(
-                        "p-4 rounded-2xl transition-all duration-300 group-hover:scale-105",
-                        getBackgroundClass(iconColor),
-                        iconColor
-                    )}>
-                        <Icon className="h-8 w-8" />
-                    </div>
-                </div>
+                )}
             </CardContent>
         </Card>
     )

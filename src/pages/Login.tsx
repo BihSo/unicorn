@@ -49,11 +49,17 @@ const Login: React.FC = () => {
                 throw new Error('Access denied. Admin privileges required.');
             }
 
+            console.log('Login successful! Calling login()...');
+
             login(data.accessToken, data.refreshToken, {
                 id: data.userId,
                 username: data.username,
                 role: 'ADMIN' // We assume admin if they can access dashboard
             });
+
+            // Verify token was stored (should work now since login() stores synchronously)
+            const storedToken = localStorage.getItem('token');
+            console.log('Token in localStorage after login:', storedToken ? storedToken.substring(0, 50) + '...' : 'NOT FOUND!');
 
             navigate('/');
         } catch (err: any) {

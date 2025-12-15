@@ -89,6 +89,12 @@ public class User implements UserDetails {
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private InvestorProfile investorProfile;
 
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<UserModerationLog> moderationLogs;
+
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<com.unicorn.backend.security.RefreshToken> refreshTokens;
+
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         if (this.role == null) {

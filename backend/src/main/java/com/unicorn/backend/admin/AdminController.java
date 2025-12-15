@@ -23,27 +23,111 @@ public class AdminController {
 
     private final UserRepository userRepository;
     private final StartupService startupService;
+    private final com.unicorn.backend.security.RefreshTokenRepository refreshTokenRepository;
+    private final StartupRepository startupRepository;
 
-    public AdminController(UserRepository userRepository, StartupService startupService) {
+    public AdminController(UserRepository userRepository, StartupService startupService,
+            com.unicorn.backend.security.RefreshTokenRepository refreshTokenRepository,
+            StartupRepository startupRepository) {
         this.userRepository = userRepository;
         this.startupService = startupService;
+        this.refreshTokenRepository = refreshTokenRepository;
+        this.startupRepository = startupRepository;
     }
 
+    /**
+     * Get all users with advanced filtering.
+     * Supports text search, role/status filters, date ranges, and boolean filters.
+     * Each filter supports negation via *Negate parameters.
+     * 
+     * GET /api/v1/admin/users
+     */
     @GetMapping("/users")
     public ResponseEntity<Page<UserResponse>> getAllUsers(
             @org.springframework.web.bind.annotation.RequestParam(required = false) String query,
+            // Advanced Filters
+            @org.springframework.web.bind.annotation.RequestParam(required = false) String email,
+            @org.springframework.web.bind.annotation.RequestParam(required = false) Boolean emailNegate,
+            @org.springframework.web.bind.annotation.RequestParam(required = false) String displayName,
+            @org.springframework.web.bind.annotation.RequestParam(required = false) Boolean displayNameNegate,
+            @org.springframework.web.bind.annotation.RequestParam(required = false) String country,
+            @org.springframework.web.bind.annotation.RequestParam(required = false) Boolean countryNegate,
+            @org.springframework.web.bind.annotation.RequestParam(required = false) String role,
+            @org.springframework.web.bind.annotation.RequestParam(required = false) Boolean roleNegate,
+            @org.springframework.web.bind.annotation.RequestParam(required = false) String status,
+            @org.springframework.web.bind.annotation.RequestParam(required = false) Boolean statusNegate,
+            @org.springframework.web.bind.annotation.RequestParam(required = false) String authProvider,
+            @org.springframework.web.bind.annotation.RequestParam(required = false) Boolean authProviderNegate,
+            @org.springframework.web.bind.annotation.RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME) java.time.LocalDateTime createdAtFrom,
+            @org.springframework.web.bind.annotation.RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME) java.time.LocalDateTime createdAtTo,
+            @org.springframework.web.bind.annotation.RequestParam(required = false) Boolean createdAtNegate,
+            @org.springframework.web.bind.annotation.RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME) java.time.LocalDateTime lastLoginFrom,
+            @org.springframework.web.bind.annotation.RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME) java.time.LocalDateTime lastLoginTo,
+            @org.springframework.web.bind.annotation.RequestParam(required = false) Boolean lastLoginNegate,
+            @org.springframework.web.bind.annotation.RequestParam(required = false) Boolean hasInvestorProfile,
+            @org.springframework.web.bind.annotation.RequestParam(required = false) Boolean hasInvestorProfileNegate,
+            @org.springframework.web.bind.annotation.RequestParam(required = false) Boolean hasStartups,
+            @org.springframework.web.bind.annotation.RequestParam(required = false) Boolean hasStartupsNegate,
+            @org.springframework.web.bind.annotation.RequestParam(required = false) Boolean isSuspended,
+            @org.springframework.web.bind.annotation.RequestParam(required = false) Boolean isSuspendedNegate,
             @PageableDefault(page = 0, size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
 
-        Page<User> usersPage;
-        if (query != null && !query.trim().isEmpty()) {
-            usersPage = userRepository.searchUsers(query.trim(), pageable);
-        } else {
-            usersPage = userRepository.findAll(pageable);
+        try {
+            Page<User> usersPage;
+
+            // Check if we have advanced filters (not just the simple query)
+            boolean hasAdvancedFilters = email != null || displayName != null || country != null ||
+                    role != null || status != null || authProvider != null ||
+                    createdAtFrom != null || createdAtTo != null ||
+                    lastLoginFrom != null || lastLoginTo != null ||
+                    hasInvestorProfile != null || hasStartups != null || isSuspended != null;
+
+            if (hasAdvancedFilters) {
+                UserFilterRequest filter = UserFilterRequest.builder()
+                        .email(email)
+                        .emailNegate(emailNegate)
+                        .displayName(displayName)
+                        .displayNameNegate(displayNameNegate)
+                        .country(country)
+                        .countryNegate(countryNegate)
+                        .role(role)
+                        .roleNegate(roleNegate)
+                        .status(status)
+                        .statusNegate(statusNegate)
+                        .authProvider(authProvider)
+                        .authProviderNegate(authProviderNegate)
+                        .createdAtFrom(createdAtFrom)
+                        .createdAtTo(createdAtTo)
+                        .createdAtNegate(createdAtNegate)
+                        .lastLoginFrom(lastLoginFrom)
+                        .lastLoginTo(lastLoginTo)
+                        .lastLoginNegate(lastLoginNegate)
+                        .hasInvestorProfile(hasInvestorProfile)
+                        .hasInvestorProfileNegate(hasInvestorProfileNegate)
+                        .hasStartups(hasStartups)
+                        .hasStartupsNegate(hasStartupsNegate)
+                        .isSuspended(isSuspended)
+                        .isSuspendedNegate(isSuspendedNegate)
+                        .build();
+
+                usersPage = userRepository.findAll(UserSpecification.buildSpecification(filter), pageable);
+            } else if (query != null && !query.trim().isEmpty()) {
+                // Simple text search using existing method
+                usersPage = userRepository.searchUsers(query.trim(), pageable);
+            } else {
+                usersPage = userRepository.findAll(pageable);
+            }
+
+            Page<UserResponse> responsePage = usersPage.map(UserResponse::fromEntity);
+
+            return ResponseEntity.ok(responsePage);
+        } catch (Exception e) {
+            System.err.println("======= ERROR IN getAllUsers =======");
+            System.err.println("Message: " + e.getMessage());
+            e.printStackTrace();
+            System.err.println("====================================");
+            throw e;
         }
-
-        Page<UserResponse> responsePage = usersPage.map(UserResponse::fromEntity);
-
-        return ResponseEntity.ok(responsePage);
     }
 
     /**
@@ -55,16 +139,47 @@ public class AdminController {
     public ResponseEntity<java.util.Map<String, Object>> getUserStats() {
         java.util.Map<String, Object> stats = new java.util.HashMap<>();
 
+        // Total Users
         long total = userRepository.count();
-        long active = userRepository.countByStatus("ACTIVE");
-        // Note: These would need proper counting - for now using simplified counts
-        long investors = userRepository.countByRole("INVESTOR");
-        long startups = userRepository.countByRole("STARTUP_OWNER");
+        java.time.LocalDateTime startOfMonth = java.time.YearMonth.now().atDay(1).atStartOfDay();
+        long newThisMonth = userRepository.countByCreatedAtAfter(startOfMonth);
 
-        stats.put("total", total);
-        stats.put("investors", investors);
-        stats.put("startups", startups);
-        stats.put("active", active);
+        java.util.Map<String, Object> totalStats = new java.util.HashMap<>();
+        totalStats.put("value", total);
+        totalStats.put("newThisMonth", newThisMonth);
+        stats.put("total", totalStats);
+
+        // Active Users (Status = ACTIVE) & Online Users (Active Session)
+        long active = userRepository.countByStatus("ACTIVE");
+        long onlineNow = refreshTokenRepository.countDistinctUserByExpiryDateAfter(java.time.Instant.now());
+
+        java.util.Map<String, Object> activeStats = new java.util.HashMap<>();
+        activeStats.put("value", active);
+        activeStats.put("onlineNow", onlineNow);
+        stats.put("active", activeStats);
+
+        // Investors
+        long investorsCount = userRepository.countByRole("INVESTOR");
+        long verifiedInvestors = userRepository.countByRoleAndInvestorProfile_IsVerifiedTrue("INVESTOR");
+
+        java.util.Map<String, Object> investorStats = new java.util.HashMap<>();
+        investorStats.put("value", investorsCount);
+        investorStats.put("verifiedCount", verifiedInvestors);
+        stats.put("investors", investorStats);
+
+        // Startups
+        long startupsCount = userRepository.countByRole("STARTUP_OWNER"); // Or count from StartupRepository directly?
+        // Using StartupRepository countByStatus is better for actual startups
+        // But logic says "Startups" box usually means Startup Users or Startup
+        // profiles.
+        // Assuming box title "Startups" refers to Startup entities:
+        long totalStartups = startupRepository.count();
+        java.math.BigDecimal totalRaised = startupRepository.getTotalFundingRaised();
+
+        java.util.Map<String, Object> startupStats = new java.util.HashMap<>();
+        startupStats.put("value", totalStartups);
+        startupStats.put("totalRaised", totalRaised != null ? totalRaised : java.math.BigDecimal.ZERO);
+        stats.put("startups", startupStats);
 
         return ResponseEntity.ok(stats);
     }

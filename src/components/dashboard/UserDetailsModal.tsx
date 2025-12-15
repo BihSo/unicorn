@@ -11,7 +11,8 @@ import { Separator } from '../ui/separator'
 import {
     Loader2, User, Mail, Phone, MapPin, Calendar, Shield,
     Building2, TrendingUp, CreditCard, Clock, AlertTriangle,
-    Ban, CheckCircle, XCircle, DollarSign, Briefcase
+    Ban, CheckCircle, XCircle, DollarSign, Briefcase,
+    Monitor, Globe
 } from 'lucide-react'
 import { formatDate } from '../../lib/utils'
 import api from '../../lib/axios'
@@ -95,7 +96,7 @@ interface UserDetails {
 export function UserDetailsModal({ userId, open, onOpenChange, onAction }: UserDetailsModalProps) {
     const [loading, setLoading] = useState(false)
     const [userDetails, setUserDetails] = useState<UserDetails | null>(null)
-    const [activeTab, setActiveTab] = useState<'info' | 'startups' | 'transactions' | 'history'>('info')
+    const [activeTab, setActiveTab] = useState<'info' | 'startups' | 'transactions' | 'history' | 'security'>('info')
 
     useEffect(() => {
         if (open && userId) {
@@ -132,6 +133,8 @@ export function UserDetailsModal({ userId, open, onOpenChange, onAction }: UserD
         }
     }
 
+
+
     const getStatusBadge = (status: string) => {
         const styles: Record<string, string> = {
             ACTIVE: 'bg-green-500/10 text-green-500 border-green-500/30',
@@ -160,11 +163,12 @@ export function UserDetailsModal({ userId, open, onOpenChange, onAction }: UserD
         )
     }
 
-    const tabs: Array<{ id: 'info' | 'startups' | 'transactions' | 'history'; label: string; icon: React.ElementType; count?: number }> = [
+    const tabs: Array<{ id: 'info' | 'startups' | 'transactions' | 'history' | 'security'; label: string; icon: React.ElementType; count?: number }> = [
         { id: 'info', label: 'Info', icon: User },
         { id: 'startups', label: 'Startups', icon: Building2, count: userDetails?.startups?.length },
         { id: 'transactions', label: 'Transactions', icon: CreditCard, count: userDetails?.recentTransactions?.length },
         { id: 'history', label: 'History', icon: Clock, count: userDetails?.moderationHistory?.length },
+        { id: 'security', label: 'Security', icon: Shield },
     ]
 
     return (
@@ -422,6 +426,11 @@ export function UserDetailsModal({ userId, open, onOpenChange, onAction }: UserD
                                     )}
                                 </div>
                             )}
+
+                            {/* Security Tab */}
+                            {activeTab === 'security' && (
+                                <SecurityTab userId={userId} />
+                            )}
                         </div>
                     </div>
                 ) : (
@@ -472,4 +481,114 @@ function ActionIcon({ type }: { type: string }) {
         DELETE: <XCircle className="h-4 w-4 text-red-500" />,
     }
     return icons[type] || <Clock className="h-4 w-4 text-muted-foreground" />
+}
+
+function SecurityTab({ userId }: { userId: string | null }) {
+    const [sessions, setSessions] = useState<any[]>([])
+    const [loadingSessions, setLoadingSessions] = useState(false)
+
+    const fetchSessions = async () => {
+        if (!userId) return
+        setLoadingSessions(true)
+        try {
+            const res = await api.get(`/admin/users/${userId}/sessions`)
+            setSessions(res.data)
+        } catch (err) {
+            console.error("Failed to fetch sessions", err)
+        } finally {
+            setLoadingSessions(false)
+        }
+    }
+
+    useEffect(() => {
+        fetchSessions()
+    }, [userId])
+
+    const handleRevokeAll = async () => {
+        if (!confirm("Are you sure you want to log out this user from ALL devices?")) return
+        try {
+            await api.delete(`/admin/users/${userId}/sessions`)
+            toast.success("All sessions revoked")
+            fetchSessions()
+        } catch (err) {
+            toast.error("Failed to revoke sessions")
+        }
+    }
+
+    const handleRevokeSession = async (sessionId: number) => {
+        try {
+            await api.delete(`/admin/users/${userId}/sessions/${sessionId}`)
+            toast.success("Session revoked")
+            fetchSessions()
+        } catch (err) {
+            toast.error("Failed to revoke session")
+        }
+    }
+
+    return (
+        <div className="space-y-6">
+            <div className="flex items-center justify-between">
+                <div>
+                    <h3 className="text-lg font-medium">Active Sessions</h3>
+                    <p className="text-sm text-muted-foreground">
+                        Manage user's active login sessions and devices
+                    </p>
+                </div>
+                <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={handleRevokeAll}
+                    disabled={sessions.length === 0}
+                >
+                    <Shield className="h-4 w-4 mr-2" />
+                    Force Logout All
+                </Button>
+            </div>
+
+            {loadingSessions ? (
+                <div className="flex justify-center py-8">
+                    <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                </div>
+            ) : sessions.length > 0 ? (
+                <div className="border rounded-md divide-y">
+                    {sessions.map((session) => (
+                        <div key={session.id} className="p-4 flex items-center justify-between transition-colors hover:bg-muted/50">
+                            <div className="space-y-1">
+                                <div className="flex items-center gap-2">
+                                    <Monitor className="h-4 w-4 text-muted-foreground" />
+                                    <span className="font-medium text-sm">{session.device}</span>
+                                    {session.isCurrent && (
+                                        <Badge variant="outline" className="text-xs bg-green-500/10 text-green-600 border-green-200">Current</Badge>
+                                    )}
+                                </div>
+                                <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                                    <div className="flex items-center gap-1">
+                                        <Globe className="h-3 w-3" />
+                                        {session.ipAddress || 'Unknown IP'}
+                                    </div>
+                                    <div className="flex items-center gap-1">
+                                        <Clock className="h-3 w-3" />
+                                        Last active: {session.lastUsedAt ? formatDate(session.lastUsedAt) : 'N/A'}
+                                    </div>
+                                </div>
+                            </div>
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-red-500 hover:text-red-600 hover:bg-red-500/10"
+                                onClick={() => handleRevokeSession(session.id)}
+                            >
+                                Revoke
+                            </Button>
+                        </div>
+                    ))}
+                </div>
+            ) : (
+                <div className="text-center py-8 text-muted-foreground bg-muted/20 rounded-lg">
+                    <Shield className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                    <p>No active sessions found</p>
+                </div>
+            )}
+        </div>
+    )
 }

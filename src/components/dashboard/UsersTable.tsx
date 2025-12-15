@@ -19,6 +19,7 @@ import { UserDetailsModal } from './UserDetailsModal'
 import { SuspendUserDialog } from './SuspendUserDialog'
 import { WarnUserDialog } from './WarnUserDialog'
 import { DeleteUserDialog } from './DeleteUserDialog'
+import { UserFilters, FilterState } from './UserFilters'
 
 interface UserData {
     id: string
@@ -56,6 +57,8 @@ export function UsersTable() {
     // Filter State
     const [searchQuery, setSearchQuery] = useState('')
     const [debouncedQuery, setDebouncedQuery] = useState('')
+    const [filters, setFilters] = useState<FilterState>({})
+    const [appliedFilters, setAppliedFilters] = useState<FilterState>({})
 
     // Modal States
     const [selectedUserId, setSelectedUserId] = useState<string | null>(null)
@@ -73,6 +76,83 @@ export function UsersTable() {
         return () => clearTimeout(handler)
     }, [searchQuery])
 
+    // Build URL with filter parameters
+    const buildFilterUrl = (baseUrl: string, filterState: FilterState): string => {
+        const params = new URLSearchParams()
+
+        // Text filters
+        if (filterState.email) {
+            params.append('email', filterState.email)
+            if (filterState.emailNegate) params.append('emailNegate', 'true')
+        }
+        if (filterState.displayName) {
+            params.append('displayName', filterState.displayName)
+            if (filterState.displayNameNegate) params.append('displayNameNegate', 'true')
+        }
+        if (filterState.country) {
+            params.append('country', filterState.country)
+            if (filterState.countryNegate) params.append('countryNegate', 'true')
+        }
+
+        // Select filters
+        if (filterState.role) {
+            params.append('role', filterState.role)
+            if (filterState.roleNegate) params.append('roleNegate', 'true')
+        }
+        if (filterState.status) {
+            params.append('status', filterState.status)
+            if (filterState.statusNegate) params.append('statusNegate', 'true')
+        }
+        if (filterState.authProvider) {
+            params.append('authProvider', filterState.authProvider)
+            if (filterState.authProviderNegate) params.append('authProviderNegate', 'true')
+        }
+
+        // Date filters
+        if (filterState.createdAtFrom) {
+            params.append('createdAtFrom', new Date(filterState.createdAtFrom).toISOString())
+        }
+        if (filterState.createdAtTo) {
+            params.append('createdAtTo', new Date(filterState.createdAtTo).toISOString())
+        }
+        if (filterState.createdAtNegate) params.append('createdAtNegate', 'true')
+
+        if (filterState.lastLoginFrom) {
+            params.append('lastLoginFrom', new Date(filterState.lastLoginFrom).toISOString())
+        }
+        if (filterState.lastLoginTo) {
+            params.append('lastLoginTo', new Date(filterState.lastLoginTo).toISOString())
+        }
+        if (filterState.lastLoginNegate) params.append('lastLoginNegate', 'true')
+
+        // Boolean filters
+        if (filterState.hasInvestorProfile !== undefined) {
+            params.append('hasInvestorProfile', String(filterState.hasInvestorProfile))
+            if (filterState.hasInvestorProfileNegate) params.append('hasInvestorProfileNegate', 'true')
+        }
+        if (filterState.hasStartups !== undefined) {
+            params.append('hasStartups', String(filterState.hasStartups))
+            if (filterState.hasStartupsNegate) params.append('hasStartupsNegate', 'true')
+        }
+        if (filterState.isSuspended !== undefined) {
+            params.append('isSuspended', String(filterState.isSuspended))
+            if (filterState.isSuspendedNegate) params.append('isSuspendedNegate', 'true')
+        }
+
+        // New filters
+        if (filterState.minWarningCount !== undefined) {
+            params.append('minWarningCount', String(filterState.minWarningCount))
+            if (filterState.minWarningCountNegate) params.append('minWarningCountNegate', 'true')
+        }
+        if (filterState.hasActiveSession !== undefined) {
+            params.append('hasActiveSession', String(filterState.hasActiveSession))
+            if (filterState.hasActiveSessionNegate) params.append('hasActiveSessionNegate', 'true')
+        }
+
+        const queryString = params.toString()
+        return queryString ? `${baseUrl}&${queryString}` : baseUrl
+    }
+
     // Fetch Data
     const fetchData = async () => {
         setIsLoading(true)
@@ -81,6 +161,9 @@ export function UsersTable() {
             if (debouncedQuery) {
                 url += `&query=${encodeURIComponent(debouncedQuery)}`
             }
+
+            // Add advanced filters
+            url = buildFilterUrl(url, appliedFilters)
 
             const response = await api.get(url)
             const pageData = response.data
@@ -97,9 +180,22 @@ export function UsersTable() {
         }
     }
 
+    // Apply filters handler
+    const handleApplyFilters = () => {
+        setAppliedFilters({ ...filters })
+        setPagination(prev => ({ ...prev, pageIndex: 0 }))
+    }
+
+    // Clear filters handler
+    const handleClearFilters = () => {
+        setFilters({})
+        setAppliedFilters({})
+        setPagination(prev => ({ ...prev, pageIndex: 0 }))
+    }
+
     useEffect(() => {
         fetchData()
-    }, [pageIndex, pageSize, debouncedQuery])
+    }, [pageIndex, pageSize, debouncedQuery, appliedFilters])
 
     const getIcon = (role: string) => {
         const r = role?.toLowerCase() || ''
@@ -302,6 +398,14 @@ export function UsersTable() {
 
     return (
         <>
+            {/* Advanced Filters Panel */}
+            <UserFilters
+                filters={filters}
+                onFiltersChange={setFilters}
+                onApply={handleApplyFilters}
+                onClear={handleClearFilters}
+            />
+
             <Card>
                 <CardHeader>
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">

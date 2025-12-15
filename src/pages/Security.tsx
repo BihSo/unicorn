@@ -3,20 +3,17 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../co
 import { Shield, Key, AlertTriangle, CheckCircle, Lock, Monitor, Clock, RefreshCw } from 'lucide-react'
 import { securityStats } from '../lib/mockData'
 import { formatNumber } from '../lib/utils'
-// import { useAuth } from '../contexts/AuthContext'
+import { useAuth } from '../contexts/AuthContext'
 import { jwtDecode } from 'jwt-decode'
 import { useState, useEffect } from 'react'
 
 export function Security() {
-    // const { user } = useAuth()
+    const { token, refreshToken } = useAuth()
     const [tokenDetails, setTokenDetails] = useState<any>(null)
     const [refreshTokenDetails, setRefreshTokenDetails] = useState<any>(null)
     const [timeRemaining, setTimeRemaining] = useState<string>('')
 
     useEffect(() => {
-        const token = localStorage.getItem('token')
-        const refreshToken = localStorage.getItem('refreshToken')
-
         if (token) {
             try {
                 const decoded: any = jwtDecode(token)
@@ -27,6 +24,8 @@ export function Security() {
             } catch (e) {
                 console.error('Failed to decode token', e)
             }
+        } else {
+            setTokenDetails(null)
         }
 
         if (refreshToken) {
@@ -36,34 +35,46 @@ export function Security() {
                 token: refreshToken,
                 exists: true
             })
+        } else {
+            setRefreshTokenDetails(null)
+        }
+    }, [token, refreshToken])
+
+    // Countdown timer
+    useEffect(() => {
+        if (!token) {
+            setTimeRemaining('')
+            return
         }
 
-        // Countdown timer
-        const timer = setInterval(() => {
-            if (token) {
-                try {
-                    const decoded: any = jwtDecode(token)
-                    const exp = decoded.exp * 1000
-                    const now = Date.now()
-                    const diff = exp - now
+        // Initial calculation
+        const calculateTimeRemaining = () => {
+            try {
+                const decoded: any = jwtDecode(token)
+                const exp = decoded.exp * 1000
+                const now = Date.now()
+                const diff = exp - now
 
-                    if (diff > 0) {
-                        const minutes = Math.floor((diff / 1000 / 60) % 60)
-                        const seconds = Math.floor((diff / 1000) % 60)
-                        const hours = Math.floor((diff / (1000 * 60 * 60)) % 24)
+                if (diff > 0) {
+                    const minutes = Math.floor((diff / 1000 / 60) % 60)
+                    const seconds = Math.floor((diff / 1000) % 60)
+                    const hours = Math.floor((diff / (1000 * 60 * 60)) % 24)
 
-                        setTimeRemaining(`${hours}h ${minutes}m ${seconds}s`)
-                    } else {
-                        setTimeRemaining('Expired')
-                    }
-                } catch (e) {
-                    setTimeRemaining('Invalid Token')
+                    setTimeRemaining(`${hours}h ${minutes}m ${seconds}s`)
+                } else {
+                    setTimeRemaining('Expired')
                 }
+            } catch (e) {
+                setTimeRemaining('Invalid Token')
             }
-        }, 1000)
+        }
+
+        calculateTimeRemaining()
+
+        const timer = setInterval(calculateTimeRemaining, 1000)
 
         return () => clearInterval(timer)
-    }, [])
+    }, [token]) // Re-run when token changes
 
     return (
         <div className="space-y-8">

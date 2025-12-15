@@ -31,6 +31,9 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, String>> handleGenericException(Exception e) {
+        // Log the error to console so we can debug it
+        e.printStackTrace();
+
         Map<String, String> response = new HashMap<>();
         response.put("error", "Internal Server Error");
         response.put("message", e.getMessage());

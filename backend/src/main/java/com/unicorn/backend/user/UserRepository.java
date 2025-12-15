@@ -1,13 +1,14 @@
 package com.unicorn.backend.user;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
 import java.util.UUID;
 
 @Repository
-public interface UserRepository extends JpaRepository<User, UUID> {
+public interface UserRepository extends JpaRepository<User, UUID>, JpaSpecificationExecutor<User> {
     Optional<User> findByEmail(String email);
 
     boolean existsByEmail(String email);
@@ -19,4 +20,8 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     long countByStatus(String status);
 
     long countByRole(String role);
+
+    long countByRoleAndInvestorProfile_IsVerifiedTrue(String role);
+
+    long countByCreatedAtAfter(java.time.LocalDateTime date);
 }
