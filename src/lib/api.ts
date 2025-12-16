@@ -3,6 +3,8 @@
  * Handles authentication tokens and provides typed API methods.
  */
 
+import { Startup, StartupStats, User } from '../types';
+
 const API_BASE_URL = '/api/v1';
 
 /**
@@ -256,37 +258,63 @@ export async function fetchConfigVersion(): Promise<{ version: number }> {
 
 // ==================== Startup Management API ====================
 
-export interface Startup {
-    id: string;
-    name: string;
-    tagline: string;
-    fullDescription: string;
-    industry: string;
-    stage: string;
-    fundingGoal: number;
-    raisedAmount: number;
-    websiteUrl: string;
-    logoUrl: string;
-    pitchDeckUrl: string;
-    status: string;
-    ownerEmail: string;
-    ownerId: string;
-    createdAt: string;
+// Startup interface imported from types
+
+export interface StartupFilterParams {
+    name?: string;
+    nameNegate?: boolean;
+    industry?: string;
+    industryNegate?: boolean;
+    ownerEmail?: string;
+    ownerEmailNegate?: boolean;
+    stage?: string;
+    stageNegate?: boolean;
+    status?: string;
+    statusNegate?: boolean;
+    fundingGoalMin?: number;
+    fundingGoalMax?: number;
+    fundingGoalNegate?: boolean;
+    raisedAmountMin?: number;
+    raisedAmountMax?: number;
+    raisedAmountNegate?: boolean;
+    createdAtFrom?: string;
+    createdAtTo?: string;
+    createdAtNegate?: boolean;
 }
 
-export async function fetchAllStartups(page: number = 0, size: number = 20): Promise<{
+export async function fetchAllStartups(
+    page: number = 0,
+    size: number = 20,
+    filters: StartupFilterParams = {}
+): Promise<{
     content: Startup[];
     totalElements: number;
     totalPages: number;
 }> {
-    const response = await fetch(`${API_BASE_URL}/admin/startups/all?page=${page}&size=${size}`, {
+    const params = new URLSearchParams({
+        page: page.toString(),
+        size: size.toString(),
+    });
+
+    // Add filters to params
+    Object.entries(filters).forEach(([key, value]) => {
+        if (value !== undefined && value !== '') {
+            if (key.endsWith('From') || key.endsWith('To')) {
+                params.append(key, new Date(value as string).toISOString());
+            } else {
+                params.append(key, value.toString());
+            }
+        }
+    });
+
+    const response = await fetch(`${API_BASE_URL}/admin/startups/all?${params}`, {
         headers: createHeaders(),
     });
     return handleResponse(response);
 }
 
 export async function transferStartupOwnership(startupId: string, newOwnerId: string): Promise<Startup> {
-    const response = await fetch(`${API_BASE_URL}/admin/startups/${startupId}/transfer-ownership`, {
+    const response = await fetch(`${API_BASE_URL}/startups/${startupId}/transfer-ownership`, {
         method: 'PUT',
         headers: createHeaders(),
         body: JSON.stringify({ newOwnerId }),
@@ -294,19 +322,28 @@ export async function transferStartupOwnership(startupId: string, newOwnerId: st
     return handleResponse<Startup>(response);
 }
 
-// ==================== User API ====================
+// StartupStats interface imported from types
 
-export interface User {
-    id: string;
-    email: string;
-    role: string;
-    status: string;
-    createdAt: string;
-    lastLoginAt: string | null;
+export async function fetchStartupStats(): Promise<StartupStats> {
+    const response = await fetch(`${API_BASE_URL}/admin/startups/stats-overview`, {
+        headers: createHeaders(),
+    });
+    return handleResponse<StartupStats>(response);
 }
 
-export async function searchUsers(query: string): Promise<{ content: User[] }> {
-    const response = await fetch(`${API_BASE_URL}/admin/users?query=${encodeURIComponent(query)}&size=10`, {
+// ==================== User API ====================
+
+// User interface imported from types
+
+export async function searchUsers(query: string, role?: string, roleNegate?: boolean): Promise<{ content: User[] }> {
+    let url = `${API_BASE_URL}/admin/users?query=${encodeURIComponent(query)}&size=10`;
+    if (role) {
+        url += `&role=${encodeURIComponent(role)}`;
+    }
+    if (roleNegate) {
+        url += `&roleNegate=true`;
+    }
+    const response = await fetch(url, {
         headers: createHeaders(),
     });
     return handleResponse(response);

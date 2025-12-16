@@ -202,6 +202,24 @@ public class StartupService {
     }
 
     /**
+     * Get all startups with advanced filtration.
+     *
+     * @param filter   the filter criteria
+     * @param pageable pagination parameters
+     * @return page of startup responses
+     */
+    @Transactional(readOnly = true)
+    public org.springframework.data.domain.Page<StartupResponse> getStartups(
+            StartupFilterRequest filter,
+            org.springframework.data.domain.Pageable pageable) {
+
+        org.springframework.data.jpa.domain.Specification<Startup> spec = StartupSpecification
+                .buildSpecification(filter);
+        return startupRepository.findAll(spec, pageable)
+                .map(StartupResponse::fromEntity);
+    }
+
+    /**
      * Get all startups with pagination (Admin only).
      *
      * @param pageable pagination parameters

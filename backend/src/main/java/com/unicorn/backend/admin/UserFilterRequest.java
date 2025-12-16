@@ -17,6 +17,9 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 public class UserFilterRequest {
 
+    // Global Search
+    private String globalQuery;
+
     // Text Filters
     private String email;
     private Boolean emailNegate;

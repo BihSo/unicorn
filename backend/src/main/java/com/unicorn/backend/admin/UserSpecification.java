@@ -20,6 +20,17 @@ public class UserSpecification {
         return (root, query, criteriaBuilder) -> {
             List<Predicate> predicates = new ArrayList<>();
 
+            // Global Query Search
+            if (filter.getGlobalQuery() != null && !filter.getGlobalQuery().trim().isEmpty()) {
+                String q = "%" + filter.getGlobalQuery().trim().toLowerCase() + "%";
+                Predicate searchPredicate = criteriaBuilder.or(
+                        criteriaBuilder.like(criteriaBuilder.lower(root.get("email")), q),
+                        criteriaBuilder.like(criteriaBuilder.lower(root.get("username")), q),
+                        criteriaBuilder.like(criteriaBuilder.lower(root.get("firstName")), q),
+                        criteriaBuilder.like(criteriaBuilder.lower(root.get("lastName")), q));
+                predicates.add(searchPredicate);
+            }
+
             // Text Filters
             addTextFilter(predicates, criteriaBuilder, root.get("email"),
                     filter.getEmail(), filter.getEmailNegate());

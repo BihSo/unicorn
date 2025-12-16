@@ -125,6 +125,9 @@ public class AdminController {
         try {
             Page<User> usersPage;
 
+            // DEBUG LOGS
+            System.out.println("DEBUG: getAllUsers called. Query: " + query + ", Role: " + role);
+
             // Check if we have advanced filters (not just the simple query)
             boolean hasAdvancedFilters = email != null || username != null ||
                     firstName != null || lastName != null ||
@@ -134,8 +137,11 @@ public class AdminController {
                     hasInvestorProfile != null || hasStartups != null || isSuspended != null ||
                     minWarningCount != null || hasActiveSession != null;
 
+            System.out.println("DEBUG: hasAdvancedFilters: " + hasAdvancedFilters);
+
             if (hasAdvancedFilters) {
                 UserFilterRequest filter = UserFilterRequest.builder()
+                        .globalQuery(query)
                         .email(email)
                         .emailNegate(emailNegate)
                         .username(username)
@@ -298,12 +304,79 @@ public class AdminController {
      * Get all startups (paginated) for admin management.
      */
 
+    /**
+     * Get all startups (paginated) with advanced filtering.
+     */
     @GetMapping("/startups/all")
     public ResponseEntity<Page<StartupResponse>> getAllStartups(
+            @RequestParam(required = false) String query,
+            // Advanced Filters
+            @RequestParam(required = false) String name,
+            @RequestParam(required = false) Boolean nameNegate,
             @RequestParam(required = false) String industry,
-            @RequestParam(required = false) UUID ownerId,
+            @RequestParam(required = false) Boolean industryNegate,
+            @RequestParam(required = false) String ownerEmail,
+            @RequestParam(required = false) Boolean ownerEmailNegate,
+            @RequestParam(required = false) String stage,
+            @RequestParam(required = false) Boolean stageNegate,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) Boolean statusNegate,
+            @RequestParam(required = false) java.math.BigDecimal fundingGoalMin,
+            @RequestParam(required = false) java.math.BigDecimal fundingGoalMax,
+            @RequestParam(required = false) Boolean fundingGoalNegate,
+            @RequestParam(required = false) java.math.BigDecimal raisedAmountMin,
+            @RequestParam(required = false) java.math.BigDecimal raisedAmountMax,
+            @RequestParam(required = false) Boolean raisedAmountNegate,
+            @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME) java.time.LocalDateTime createdAtFrom,
+            @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME) java.time.LocalDateTime createdAtTo,
+            @RequestParam(required = false) Boolean createdAtNegate,
             @PageableDefault(page = 0, size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
-        Page<StartupResponse> startups = startupService.getAllStartups(pageable);
+
+        StartupFilterRequest filter = StartupFilterRequest.builder()
+                .globalQuery(query)
+                .name(name)
+                .nameNegate(nameNegate)
+                .industry(industry)
+                .industryNegate(industryNegate)
+                .ownerEmail(ownerEmail)
+                .ownerEmailNegate(ownerEmailNegate)
+                .stage(stage)
+                .stageNegate(stageNegate)
+                .status(status)
+                .statusNegate(statusNegate)
+                .fundingGoalMin(fundingGoalMin)
+                .fundingGoalMax(fundingGoalMax)
+                .fundingGoalNegate(fundingGoalNegate)
+                .raisedAmountMin(raisedAmountMin)
+                .raisedAmountMax(raisedAmountMax)
+                .raisedAmountNegate(raisedAmountNegate)
+                .createdAtFrom(createdAtFrom)
+                .createdAtTo(createdAtTo)
+                .createdAtNegate(createdAtNegate)
+                .build();
+
+        Page<StartupResponse> startups = startupService.getStartups(filter, pageable);
         return ResponseEntity.ok(startups);
+    }
+
+    /**
+     * Get startup overview statistics.
+     */
+    @GetMapping("/startups/stats-overview")
+    public ResponseEntity<java.util.Map<String, Object>> getStartupOverviewStats() {
+        java.util.Map<String, Object> stats = new java.util.HashMap<>();
+
+        long total = startupRepository.count();
+        long active = startupRepository.countByStatus(StartupStatus.APPROVED);
+        long activeAlt = startupRepository.countByStatus(StartupStatus.ACTIVE);
+        long pending = startupRepository.countByStatus(StartupStatus.PENDING);
+        long rejected = startupRepository.countByStatus(StartupStatus.REJECTED);
+
+        stats.put("total", total);
+        stats.put("active", active + activeAlt);
+        stats.put("pending", pending);
+        stats.put("rejected", rejected);
+
+        return ResponseEntity.ok(stats);
     }
 }

@@ -27,11 +27,27 @@ export interface Startup {
     ownerId: string;
     ownerEmail: string;
     createdAt: string;
-    updatedAt: string;
+    updatedAt?: string;
 }
 
 // Request to update startup status (admin)
 export interface UpdateStartupStatusRequest {
     status: StartupStatus;
     rejectionReason?: string;
+}
+
+export interface StartupStats {
+    total: number;
+    active: number;
+    pending: number;
+    rejected: number;
+}
+
+export interface User {
+    id: string;
+    email: string;
+    role: string;
+    status: string;
+    createdAt: string;
+    lastLoginAt: string | null;
 }

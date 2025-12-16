@@ -20,6 +20,7 @@ import java.util.UUID;
 public class StartupController {
 
     private final StartupService startupService;
+    private final com.unicorn.backend.user.UserRepository userRepository;
 
     /**
      * Create a new startup.
@@ -90,5 +91,32 @@ public class StartupController {
     public ResponseEntity<List<StartupResponse>> getStartupsByStatus(@PathVariable StartupStatus status) {
         List<StartupResponse> startups = startupService.getStartupsByStatus(status);
         return ResponseEntity.ok(startups);
+    }
+
+    /**
+     * Transfer startup ownership.
+     * Accessible by ADMIN or current Startup Owner.
+     */
+    @PutMapping("/{id}/transfer-ownership")
+    public ResponseEntity<StartupResponse> transferOwnership(
+            @PathVariable UUID id,
+            @RequestBody com.unicorn.backend.admin.TransferOwnershipRequest request,
+            @AuthenticationPrincipal User currentUser) {
+
+        StartupResponse startup = startupService.getStartupById(id);
+
+        // Security Check: Is Admin OR Current Owner?
+        boolean isAdmin = currentUser.getRole().contains("ADMIN");
+        boolean isOwner = startup.getOwnerId().equals(currentUser.getId());
+
+        if (!isAdmin && !isOwner) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+
+        User newOwner = userRepository.findById(request.getNewOwnerId())
+                .orElseThrow(() -> new IllegalArgumentException("New owner not found"));
+
+        StartupResponse updated = startupService.transferOwnership(id, newOwner);
+        return ResponseEntity.ok(updated);
     }
 }

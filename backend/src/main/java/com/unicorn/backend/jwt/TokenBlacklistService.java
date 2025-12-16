@@ -1,23 +1,29 @@
 package com.unicorn.backend.jwt;
 
-import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
-import java.util.concurrent.TimeUnit;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Service
-@RequiredArgsConstructor
 public class TokenBlacklistService {
     private static final Logger logger = LoggerFactory.getLogger(TokenBlacklistService.class);
 
-    private final StringRedisTemplate redisTemplate;
+    // In-memory replacement for Redis
+    private final Map<String, Long> tokenBlacklist = new ConcurrentHashMap<>();
+    private final Map<String, Long> userRevocationList = new ConcurrentHashMap<>();
+
+    public TokenBlacklistService() {
+        logger.info("Initialized In-Memory TokenBlacklistService");
+    }
 
     public void blacklistToken(String token, long expirationSeconds) {
         try {
-            redisTemplate.opsForValue().set(token, "blacklisted", expirationSeconds, TimeUnit.SECONDS);
+            // Store absolute expiry time in millis
+            long expiryTime = System.currentTimeMillis() + (expirationSeconds * 1000);
+            tokenBlacklist.put(token, expiryTime);
         } catch (Exception e) {
             logger.error("Unexpected error while blacklisting token", e);
         }
@@ -25,43 +31,44 @@ public class TokenBlacklistService {
 
     public boolean isTokenBlacklisted(String token) {
         try {
-            return Boolean.TRUE.equals(redisTemplate.hasKey(token));
+            Long expiry = tokenBlacklist.get(token);
+            if (expiry == null) {
+                return false;
+            }
+            // Check if expired
+            if (System.currentTimeMillis() > expiry) {
+                tokenBlacklist.remove(token); // Lazy cleanup
+                return false;
+            }
+            return true;
         } catch (Exception e) {
             logger.error("Unexpected error while checking token blacklist", e);
             return false;
         }
     }
 
-    // New method to ban user via ID - creates a key "blacklist:user:{id}" with
-    // value of revocation timestamp
+    // Revoke user access (e.g. on logout all)
     public void revokeUserAccess(String userId) {
         try {
-            String key = "blacklist:user:" + userId;
-            // Set revocation timestamp to NOW.
-            // We set expiry to 1 hour (or whatever the max access token duration is) +
-            // buffer.
-            // Actually, for user ban, we might want it to persist longer or check logic.
-            // But usually we just need to invalidate CURRENT tokens. Future tokens are
-            // blocked by DB status check.
-            // Let's keep it for 24 hours just to be safe.
-            redisTemplate.opsForValue().set(key, String.valueOf(System.currentTimeMillis()), 24, TimeUnit.HOURS);
+            // Store current timestamp as revocation time
+            userRevocationList.put(userId, System.currentTimeMillis());
         } catch (Exception e) {
-            logger.error("Error revoking user access in Redis", e);
+            logger.error("Error revoking user access in memory", e);
         }
     }
 
     public boolean isUserRevoked(String userId, long tokenIssuedAt) {
         try {
-            String key = "blacklist:user:" + userId;
-            String revocationTimeStr = redisTemplate.opsForValue().get(key);
-            if (revocationTimeStr != null) {
-                long revocationTime = Long.parseLong(revocationTimeStr);
-                // If token was issued BEFORE revocation time, it's invalid
+            Long revocationTime = userRevocationList.get(userId);
+            if (revocationTime != null) {
+                // If token was issued BEFORE the revocation timestamp, it is invalid
+                // Note: Ensure tokenIssuedAt is in Milliseconds to match
+                // System.currentTimeMillis()
                 return tokenIssuedAt < revocationTime;
             }
             return false;
         } catch (Exception e) {
-            logger.error("Error checking user revocation in Redis", e);
+            logger.error("Error checking user revocation in memory", e);
             return false;
         }
     }

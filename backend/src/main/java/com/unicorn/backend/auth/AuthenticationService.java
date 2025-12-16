@@ -79,7 +79,7 @@ public class AuthenticationService {
                 }
 
                 user.setPasswordHash(passwordEncoder.encode(request.password()));
-                user.setRole(request.role() != null ? request.role().toUpperCase() : "USER");
+                user.setRole(request.role() != null ? request.role().toUpperCase() : "STARTUP_OWNER");
                 user.setStatus("PENDING_VERIFICATION");
                 user.setAuthProvider("LOCAL");
                 user.setFirstName(request.firstName());

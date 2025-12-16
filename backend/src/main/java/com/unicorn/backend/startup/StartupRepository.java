@@ -8,11 +8,13 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+
 /**
  * Repository interface for Startup entity.
  */
 @Repository
-public interface StartupRepository extends JpaRepository<Startup, UUID> {
+public interface StartupRepository extends JpaRepository<Startup, UUID>, JpaSpecificationExecutor<Startup> {
 
     /**
      * Find all startups owned by a specific user.
