@@ -15,7 +15,7 @@ import { formatDate } from '../../lib/utils'
 import {
     Building2, TrendingUp, User as UserIcon, Loader2, ChevronLeft,
     ChevronRight, ChevronsLeft, ChevronsRight, Search, Eye, Ban,
-    AlertTriangle, Trash2, Shield, Clock, Download, RotateCcw
+    AlertTriangle, Trash2, Shield, Clock, Download, RotateCcw, UserPlus
 } from 'lucide-react'
 import { toast } from 'sonner'
 import api from '../../lib/axios'
@@ -23,6 +23,7 @@ import { UserDetailsModal } from './UserDetailsModal'
 import { SuspendUserDialog } from './SuspendUserDialog'
 import { WarnUserDialog } from './WarnUserDialog'
 import { DeleteUserDialog } from './DeleteUserDialog'
+import { AddAdminDialog } from './AddAdminDialog'
 import { UserFilters, FilterState } from './UserFilters'
 
 import {
@@ -32,6 +33,7 @@ import {
 import { Label } from '../../components/ui/label'
 import { Checkbox } from '../../components/ui/checkbox'
 import { RadioGroup, RadioGroupItem } from '../../components/ui/radio-group'
+import { useAuth } from '../../contexts/AuthContext'
 
 // ... existing imports ...
 
@@ -87,6 +89,9 @@ export function UsersTable() {
         pageSize: 20,
     })
 
+    const { user: currentUser } = useAuth()
+    const isSuperAdmin = currentUser?.role === 'SUPER_ADMIN'
+
     const pagination = useMemo(
         () => ({
             pageIndex,
@@ -113,6 +118,7 @@ export function UsersTable() {
     const [suspendDialogOpen, setSuspendDialogOpen] = useState(false)
     const [warnDialogOpen, setWarnDialogOpen] = useState(false)
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+    const [addAdminOpen, setAddAdminOpen] = useState(false)
 
     // Export State
     const [exportDialogOpen, setExportDialogOpen] = useState(false)
@@ -482,7 +488,19 @@ export function UsersTable() {
                 cell: ({ row }) => {
                     const user = row.original
                     const isAdmin = user.role === 'ADMIN'
+                    const isTargetSuperAdmin = user.role === 'SUPER_ADMIN'
                     const isSuspended = user.status === 'SUSPENDED' || user.status === 'BANNED'
+
+                    // Logic:
+                    // 1. If target is Super Admin, nobody can touch them (except maybe another Super Admin, but usually safeguard).
+                    // 2. If target is Admin, only Super Admin can touch them.
+                    // 3. If target is User/Investor/Startup, any Admin (including regular Admin) can touch them.
+
+                    const canManage = (() => {
+                        if (isTargetSuperAdmin) return false; // Protect Super Admin from everyone
+                        if (isAdmin) return isSuperAdmin; // Only Super Admin can manage Admins
+                        return true; // Everyone can manage non-admins
+                    })()
 
                     return (
                         <div className="flex items-center gap-1">
@@ -494,7 +512,7 @@ export function UsersTable() {
                             >
                                 <Eye className="h-4 w-4" />
                             </Button>
-                            {!isAdmin && (
+                            {canManage && (
                                 <>
                                     <Button
                                         variant="ghost"
@@ -576,6 +594,17 @@ export function UsersTable() {
                                 <RotateCcw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
                                 Refresh
                             </Button>
+
+                            <Button
+                                className="gap-2"
+                                onClick={() => setAddAdminOpen(true)}
+                                disabled={!isSuperAdmin}
+                                title={!isSuperAdmin ? "Only Super Admin can create new admins" : "Create New Admin"}
+                            >
+                                <UserPlus className="h-4 w-4" />
+                                New Admin
+                            </Button>
+
                             {/* Export Dropdown */}
                             <Dialog open={exportDialogOpen} onOpenChange={setExportDialogOpen}>
                                 <DialogTrigger asChild>
@@ -827,7 +856,13 @@ export function UsersTable() {
                 userId={selectedUserId}
                 open={deleteDialogOpen}
                 onOpenChange={setDeleteDialogOpen}
-                onSuccess={handleActionComplete}
+                onSuccess={fetchData}
+            />
+
+            <AddAdminDialog
+                open={addAdminOpen}
+                onOpenChange={setAddAdminOpen}
+                onSuccess={fetchData}
             />
         </>
     )

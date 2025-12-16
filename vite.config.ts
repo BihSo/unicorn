@@ -17,7 +17,7 @@ export default defineConfig({
         host: '0.0.0.0',
         port: 5173,
         strictPort: false,
-        allowedHosts: ['12f9265fdb3c.ngrok-free.app'], // Allow ngrok domain
+        allowedHosts: ['https://7395d4aba8cd.ngrok-free.app'], // Allow ngrok domain
         proxy: {
             '/api': {
                 target: 'http://localhost:9090',

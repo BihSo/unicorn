@@ -1,9 +1,11 @@
 import { Moon, Sun, User } from 'lucide-react'
 import { useTheme } from '../../contexts/ThemeContext'
 import { Switch } from '../../components/ui/switch'
+import { useAuth } from '../../contexts/AuthContext'
 
 export function Header() {
     const { theme, toggleTheme } = useTheme()
+    const { user } = useAuth()
 
     return (
         <header className="sticky top-0 z-20 glass border-b border-border">
@@ -24,12 +26,18 @@ export function Header() {
 
                     {/* User Profile */}
                     <button className="flex items-center gap-2 px-2 py-1.5 lg:px-3 lg:py-2 rounded-lg hover:bg-accent transition-colors">
-                        <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center">
-                            <User className="h-4 w-4 text-primary-foreground" />
+                        <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center overflow-hidden">
+                            {user?.avatarUrl ? (
+                                <img src={user.avatarUrl} alt="Avatar" className="h-full w-full object-cover" />
+                            ) : (
+                                <User className="h-4 w-4 text-primary-foreground" />
+                            )}
                         </div>
                         <div className="hidden md:block text-left">
-                            <p className="text-sm font-medium">Admin User</p>
-                            <p className="text-xs text-muted-foreground">admin@unicorn.com</p>
+                            <p className="text-sm font-medium">
+                                {user?.displayName || (user?.firstName ? `${user.firstName} ${user.lastName || ''}` : 'User')}
+                            </p>
+                            <p className="text-xs text-muted-foreground">{user?.email || 'No email'}</p>
                         </div>
                     </button>
                 </div>

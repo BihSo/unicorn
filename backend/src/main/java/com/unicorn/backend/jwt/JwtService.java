@@ -48,6 +48,11 @@ public class JwtService {
 
     public boolean isTokenValid(String token, UserDetails userDetails) {
         final String email = extractEmail(token);
+        // We must check against email because the token subject is email,
+        // but userDetails.getUsername() might return the 'username' field if set.
+        if (userDetails instanceof User) {
+            return (email.equals(((User) userDetails).getEmail())) && !isTokenExpired(token);
+        }
         return (email.equals(userDetails.getUsername())) && !isTokenExpired(token);
     }
 

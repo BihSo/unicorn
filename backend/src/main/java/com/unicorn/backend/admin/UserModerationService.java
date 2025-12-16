@@ -92,10 +92,16 @@ public class UserModerationService {
          * Suspend a user temporarily or permanently.
          */
         @Transactional
-        public UserModerationLog suspendUser(UUID userId, UUID adminId, String adminEmail,
-                        SuspendUserRequest request) {
+        public UserModerationLog suspendUser(UUID userId, User adminUser, SuspendUserRequest request) {
                 User user = userRepository.findById(userId)
                                 .orElseThrow(() -> new RuntimeException("User not found: " + userId));
+
+                // Super Admin check
+                if (("ADMIN".equals(user.getRole()) || "SUPER_ADMIN".equals(user.getRole()))
+                                && !"SUPER_ADMIN".equals(adminUser.getRole())) {
+                        throw new org.springframework.security.access.AccessDeniedException(
+                                        "Only Super Admins can manage other Admins");
+                }
 
                 String previousStatus = user.getStatus();
 
@@ -118,8 +124,8 @@ public class UserModerationService {
                 // Create moderation log
                 UserModerationLog log = UserModerationLog.builder()
                                 .user(user)
-                                .adminId(adminId)
-                                .adminEmail(adminEmail)
+                                .adminId(adminUser.getId())
+                                .adminEmail(adminUser.getEmail())
                                 .actionType(
                                                 request.isPermanent() ? ModerationActionType.PERMANENT_BAN
                                                                 : ModerationActionType.SUSPENSION)
@@ -138,16 +144,22 @@ public class UserModerationService {
          * Issue a warning to a user.
          */
         @Transactional
-        public UserModerationLog warnUser(UUID userId, UUID adminId, String adminEmail,
-                        WarnUserRequest request) {
+        public UserModerationLog warnUser(UUID userId, User adminUser, WarnUserRequest request) {
                 User user = userRepository.findById(userId)
                                 .orElseThrow(() -> new RuntimeException("User not found: " + userId));
+
+                // Super Admin check
+                if (("ADMIN".equals(user.getRole()) || "SUPER_ADMIN".equals(user.getRole()))
+                                && !"SUPER_ADMIN".equals(adminUser.getRole())) {
+                        throw new org.springframework.security.access.AccessDeniedException(
+                                        "Only Super Admins can warn other Admins");
+                }
 
                 // Create warning log
                 UserModerationLog log = UserModerationLog.builder()
                                 .user(user)
-                                .adminId(adminId)
-                                .adminEmail(adminEmail)
+                                .adminId(adminUser.getId())
+                                .adminEmail(adminUser.getEmail())
                                 .actionType(ModerationActionType.WARNING)
                                 .reason(request.getReason())
                                 .previousStatus(user.getStatus())
@@ -162,10 +174,16 @@ public class UserModerationService {
          * Remove suspension from a user.
          */
         @Transactional
-        public UserModerationLog unsuspendUser(UUID userId, UUID adminId, String adminEmail,
-                        String reason) {
+        public UserModerationLog unsuspendUser(UUID userId, User adminUser, String reason) {
                 User user = userRepository.findById(userId)
                                 .orElseThrow(() -> new RuntimeException("User not found: " + userId));
+
+                // Super Admin check
+                if (("ADMIN".equals(user.getRole()) || "SUPER_ADMIN".equals(user.getRole()))
+                                && !"SUPER_ADMIN".equals(adminUser.getRole())) {
+                        throw new org.springframework.security.access.AccessDeniedException(
+                                        "Only Super Admins can unsuspend other Admins");
+                }
 
                 if (!"SUSPENDED".equals(user.getStatus())) {
                         throw new RuntimeException("User is not suspended");
@@ -181,7 +199,7 @@ public class UserModerationService {
                 if (activeSuspension != null) {
                         activeSuspension.setIsActive(false);
                         activeSuspension.setRevokedAt(LocalDateTime.now());
-                        activeSuspension.setRevokedBy(adminId);
+                        activeSuspension.setRevokedBy(adminUser.getId());
                         activeSuspension.setRevokeReason(reason);
                         moderationLogRepository.save(activeSuspension);
                 }
@@ -194,7 +212,7 @@ public class UserModerationService {
                 if (activeBan != null) {
                         activeBan.setIsActive(false);
                         activeBan.setRevokedAt(LocalDateTime.now());
-                        activeBan.setRevokedBy(adminId);
+                        activeBan.setRevokedBy(adminUser.getId());
                         activeBan.setRevokeReason(reason);
                         moderationLogRepository.save(activeBan);
                 }
@@ -210,8 +228,8 @@ public class UserModerationService {
                 // Create unsuspend log
                 UserModerationLog log = UserModerationLog.builder()
                                 .user(user)
-                                .adminId(adminId)
-                                .adminEmail(adminEmail)
+                                .adminId(adminUser.getId())
+                                .adminEmail(adminUser.getEmail())
                                 .actionType(ModerationActionType.UNSUSPEND)
                                 .reason(reason)
                                 .previousStatus(previousStatus)
@@ -227,9 +245,16 @@ public class UserModerationService {
          * User cannot register again with same email.
          */
         @Transactional
-        public UserModerationLog softDeleteUser(UUID userId, UUID adminId, String adminEmail, String reason) {
+        public UserModerationLog softDeleteUser(UUID userId, User adminUser, String reason) {
                 User user = userRepository.findById(userId)
                                 .orElseThrow(() -> new RuntimeException("User not found: " + userId));
+
+                // Super Admin check
+                if (("ADMIN".equals(user.getRole()) || "SUPER_ADMIN".equals(user.getRole()))
+                                && !"SUPER_ADMIN".equals(adminUser.getRole())) {
+                        throw new org.springframework.security.access.AccessDeniedException(
+                                        "Only Super Admins can delete other Admins");
+                }
 
                 String previousStatus = user.getStatus();
 
@@ -242,8 +267,8 @@ public class UserModerationService {
                 // Create deletion log
                 UserModerationLog log = UserModerationLog.builder()
                                 .user(user)
-                                .adminId(adminId)
-                                .adminEmail(adminEmail)
+                                .adminId(adminUser.getId())
+                                .adminEmail(adminUser.getEmail())
                                 .actionType(ModerationActionType.DELETE)
                                 .reason(reason)
                                 .previousStatus(previousStatus)
@@ -259,9 +284,16 @@ public class UserModerationService {
          * User can register again with same email.
          */
         @Transactional
-        public void hardDeleteUser(UUID userId) {
+        public void hardDeleteUser(UUID userId, User adminUser) {
                 User user = userRepository.findById(userId)
                                 .orElseThrow(() -> new RuntimeException("User not found: " + userId));
+
+                // Super Admin check
+                if (("ADMIN".equals(user.getRole()) || "SUPER_ADMIN".equals(user.getRole()))
+                                && !"SUPER_ADMIN".equals(adminUser.getRole())) {
+                        throw new org.springframework.security.access.AccessDeniedException(
+                                        "Only Super Admins can delete other Admins");
+                }
 
                 // Delete refresh tokens first (foreign key constraint)
                 refreshTokenRepository.deleteByUserId(userId);

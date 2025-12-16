@@ -121,7 +121,8 @@ public class User implements UserDetails {
         if (this.role == null) {
             return Collections.emptyList();
         }
-        return Collections.singleton(new SimpleGrantedAuthority("ROLE_" + this.role.toUpperCase()));
+        String r = "ROLE_" + this.role.trim().toUpperCase();
+        return Collections.singleton(new SimpleGrantedAuthority(r));
     }
 
     @Override
@@ -158,6 +159,17 @@ public class User implements UserDetails {
     }
 
     public Boolean getCanAccessDashboard() {
-        return "ADMIN".equals(this.role);
+        if (this.role == null)
+            return false;
+        String r = this.role.trim().toUpperCase();
+        return "ADMIN".equals(r) || "SUPER_ADMIN".equals(r);
+    }
+
+    public boolean isSuperAdmin() {
+        return this.role != null && "SUPER_ADMIN".equals(this.role.trim().toUpperCase());
+    }
+
+    public boolean isAdmin() {
+        return this.role != null && "ADMIN".equals(this.role.trim().toUpperCase());
     }
 }

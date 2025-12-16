@@ -204,7 +204,8 @@ public class AuthenticationService {
                 emailService.sendOtp(savedUser.getEmail(), otp);
 
                 // Return Empty Response or Partial (No Tokens)
-                return new LoginResponse(null, null, savedUser.getUsername(), savedUser.getId(),
+                return new LoginResponse(null, null, savedUser.getUsername(), savedUser.getEmail(), savedUser.getRole(),
+                                savedUser.getId(),
                                 null, false);
         }
 
@@ -248,6 +249,8 @@ public class AuthenticationService {
                                 jwtToken,
                                 refreshToken.getToken(),
                                 user.getUsername(),
+                                user.getEmail(),
+                                user.getRole(),
                                 user.getId(),
                                 null,
                                 user.getCanAccessDashboard());
@@ -263,6 +266,8 @@ public class AuthenticationService {
                                                         jwtToken,
                                                         request.token(),
                                                         user.getUsername(),
+                                                        user.getEmail(),
+                                                        user.getRole(),
                                                         user.getId(),
                                                         null,
                                                         user.getCanAccessDashboard());
@@ -304,6 +309,8 @@ public class AuthenticationService {
                                 jwtToken,
                                 refreshToken.getToken(),
                                 user.getUsername(),
+                                user.getEmail(),
+                                user.getRole(),
                                 user.getId(),
                                 null,
                                 user.getCanAccessDashboard());

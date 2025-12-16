@@ -19,7 +19,7 @@ import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/v1/admin")
-@PreAuthorize("hasRole('ADMIN')")
+@PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
 public class AdminController {
 
     private final UserRepository userRepository;
@@ -28,15 +28,51 @@ public class AdminController {
     private final StartupRepository startupRepository;
     private final UserResponseService userResponseService;
 
+    private final org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
+    private final com.unicorn.backend.user.AvatarService avatarService;
+
     public AdminController(UserRepository userRepository, StartupService startupService,
             com.unicorn.backend.security.RefreshTokenRepository refreshTokenRepository,
             StartupRepository startupRepository,
-            UserResponseService userResponseService) {
+            UserResponseService userResponseService,
+            org.springframework.security.crypto.password.PasswordEncoder passwordEncoder,
+            com.unicorn.backend.user.AvatarService avatarService) {
         this.userRepository = userRepository;
         this.startupService = startupService;
         this.refreshTokenRepository = refreshTokenRepository;
         this.startupRepository = startupRepository;
         this.userResponseService = userResponseService;
+        this.passwordEncoder = passwordEncoder;
+        this.avatarService = avatarService;
+    }
+
+    @PostMapping("/users")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    public ResponseEntity<?> createAdmin(@RequestBody @jakarta.validation.Valid CreateUserRequest request) {
+        if (userRepository.existsByEmail(request.email())) {
+            return ResponseEntity.badRequest().body("Email already exists");
+        }
+        if (userRepository.existsByUsername(request.username())) {
+            return ResponseEntity.badRequest().body("Username already exists");
+        }
+
+        User user = new User();
+        user.setFirstName(request.firstName());
+        user.setLastName(request.lastName());
+        user.setEmail(request.email());
+        user.setUsername(request.username());
+        user.setPasswordHash(passwordEncoder.encode(request.password()));
+        user.setRole("ADMIN");
+        user.setStatus("ACTIVE");
+        user.setAuthProvider("LOCAL");
+        user.setCreatedAt(java.time.LocalDateTime.now());
+
+        // Generate random avatar
+        user = userRepository.saveAndFlush(user);
+        user.setAvatarUrl(avatarService.getRandomAvatar(user.getId()));
+        userRepository.save(user);
+
+        return ResponseEntity.ok(java.util.Map.of("message", "Admin user created successfully"));
     }
 
     /**

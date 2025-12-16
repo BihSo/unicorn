@@ -38,7 +38,7 @@ public class ConfigController {
      * GET /api/v1/admin/config
      */
     @GetMapping("/api/v1/admin/config")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
     public ResponseEntity<List<AppConfig>> getAllConfigs() {
         return ResponseEntity.ok(configService.getAll());
     }
@@ -49,7 +49,7 @@ public class ConfigController {
      * GET /api/v1/admin/config/grouped
      */
     @GetMapping("/api/v1/admin/config/grouped")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
     public ResponseEntity<Map<String, List<AppConfig>>> getConfigsGrouped() {
         return ResponseEntity.ok(configService.getAllGroupedByCategory());
     }
@@ -60,7 +60,7 @@ public class ConfigController {
      * PUT /api/v1/admin/config/{key}
      */
     @PutMapping("/api/v1/admin/config/{key}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
     public ResponseEntity<AppConfig> updateConfig(
             @PathVariable String key,
             @RequestBody Map<String, String> body) {
@@ -78,7 +78,7 @@ public class ConfigController {
      * PUT /api/v1/admin/config
      */
     @PutMapping("/api/v1/admin/config")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
     public ResponseEntity<Map<String, Object>> batchUpdateConfigs(@RequestBody Map<String, String> updates) {
         for (Map.Entry<String, String> entry : updates.entrySet()) {
             configService.updateValue(entry.getKey(), entry.getValue());
@@ -97,7 +97,7 @@ public class ConfigController {
      * POST /api/v1/admin/config
      */
     @PostMapping("/api/v1/admin/config")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
     public ResponseEntity<AppConfig> createOrUpdateConfig(@RequestBody ConfigCreateRequest request) {
         AppConfig config = configService.upsert(
                 request.getKey(),
@@ -110,11 +110,11 @@ public class ConfigController {
 
     /**
      * Get current config version.
-     * 
+     *
      * GET /api/v1/admin/config/version
      */
     @GetMapping("/api/v1/admin/config/version")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
     public ResponseEntity<Map<String, Integer>> getConfigVersion() {
         return ResponseEntity.ok(Map.of("version", configService.getVersion()));
     }

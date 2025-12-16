@@ -17,6 +17,7 @@ import {
 import { formatDate } from '../../lib/utils'
 import api from '../../lib/axios'
 import { toast } from 'sonner'
+import { useAuth } from '../../contexts/AuthContext'
 
 interface UserDetailsModalProps {
     userId: string | null
@@ -106,6 +107,15 @@ export function UserDetailsModal({ userId, open, onOpenChange, onAction }: UserD
     const [loading, setLoading] = useState(false)
     const [userDetails, setUserDetails] = useState<UserDetails | null>(null)
     const [activeTab, setActiveTab] = useState<'info' | 'startups' | 'transactions' | 'history' | 'security'>('info')
+
+    const { user: currentUser } = useAuth()
+    const isSuperAdmin = currentUser?.role === 'SUPER_ADMIN'
+
+    const canManageUser = userDetails ? (
+        userDetails.role === 'SUPER_ADMIN' ? false :
+            userDetails.role === 'ADMIN' ? isSuperAdmin :
+                true
+    ) : false
 
     useEffect(() => {
         if (open && userId) {
@@ -226,10 +236,8 @@ export function UserDetailsModal({ userId, open, onOpenChange, onAction }: UserD
                                     <div className="flex items-center gap-2 mt-1">
                                         <Badge variant="outline">{userDetails.role}</Badge>
                                         {getStatusBadge(userDetails.status)}
-                                        {/* Plan for Non-Investors, Verification for Investors */}
-                                        {userDetails.role !== 'INVESTOR' ? (
-                                            getPlanBadge(userDetails.currentSubscription?.plan || 'FREE')
-                                        ) : (
+                                        {/* Plan for Non-Investors/Non-Admins, Verification for Investors */}
+                                        {userDetails.role === 'INVESTOR' ? (
                                             userDetails.investorInfo?.isVerified ? (
                                                 <Badge className="bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 border-emerald-200">
                                                     <CheckCircle className="h-3 w-3 mr-1" />
@@ -240,11 +248,18 @@ export function UserDetailsModal({ userId, open, onOpenChange, onAction }: UserD
                                                     Not Verified
                                                 </Badge>
                                             )
+                                        ) : userDetails.role === 'ADMIN' ? (
+                                            <Badge className="bg-purple-500/10 text-purple-600 hover:bg-purple-500/20 border-purple-200">
+                                                <Shield className="h-3 w-3 mr-1" />
+                                                Super Admin
+                                            </Badge>
+                                        ) : (
+                                            getPlanBadge(userDetails.currentSubscription?.plan || 'FREE')
                                         )}
                                     </div>
                                 </div>
                             </div>
-                            {(userDetails.status === 'SUSPENDED' || userDetails.status === 'BANNED') && (
+                            {(userDetails.status === 'SUSPENDED' || userDetails.status === 'BANNED') && canManageUser && (
                                 <Button variant="outline" onClick={handleUnsuspend} size="sm">
                                     <CheckCircle className="h-4 w-4 mr-2" />
                                     Unsuspend
@@ -254,7 +269,13 @@ export function UserDetailsModal({ userId, open, onOpenChange, onAction }: UserD
 
                         {/* Tabs */}
                         <div className="flex border-b mb-4">
-                            {tabs.map(tab => {
+                            {tabs.filter(tab => {
+                                // Filter out tabs based on role
+                                if (userDetails.role === 'ADMIN') {
+                                    return ['info', 'history', 'security'].includes(tab.id)
+                                }
+                                return true
+                            }).map(tab => {
                                 // Rename Startups to Deals for Investors
                                 if (tab.id === 'startups' && userDetails.role === 'INVESTOR') {
                                     return (
@@ -303,42 +324,48 @@ export function UserDetailsModal({ userId, open, onOpenChange, onAction }: UserD
                                         <InfoRow icon={Mail} label="Email" value={userDetails.email} />
                                         <InfoRow icon={User} label="First Name" value={userDetails.firstName || '-'} />
                                         <InfoRow icon={User} label="Last Name" value={userDetails.lastName || '-'} />
-                                        <InfoRow icon={Phone} label="Phone" value={userDetails.phoneNumber || 'Not provided'} />
-                                        <InfoRow icon={MapPin} label="Country" value={userDetails.country || 'Not specified'} />
-                                        <InfoRow icon={Shield} label="Auth Provider" value={userDetails.authProvider} />
+                                        {userDetails.role !== 'ADMIN' && (
+                                            <>
+                                                <InfoRow icon={Phone} label="Phone" value={userDetails.phoneNumber || 'Not provided'} />
+                                                <InfoRow icon={MapPin} label="Country" value={userDetails.country || 'Not specified'} />
+                                                <InfoRow icon={Shield} label="Auth Provider" value={userDetails.authProvider} />
+                                            </>
+                                        )}
                                     </div>
 
-                                    {/* Additional Info (Bio & LinkedIn) moved here for universal visibility */}
-                                    <div className="grid grid-cols-1 gap-4 mt-4">
-                                        <div className="flex items-center gap-3">
-                                            <Globe className="h-4 w-4 text-muted-foreground" />
-                                            <div>
-                                                <p className="text-xs text-muted-foreground">LinkedIn</p>
-                                                {userDetails.linkedInUrl ? (
-                                                    <a
-                                                        href={userDetails.linkedInUrl.startsWith('http') ? userDetails.linkedInUrl : `https://www.linkedin.com/in/${userDetails.linkedInUrl.replace(/^\/+/, '')}`}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        className="text-sm font-medium text-blue-500 hover:underline"
-                                                    >
-                                                        {userDetails.linkedInUrl.replace(/^https?:\/\/(www\.)?linkedin\.com\/in\//, '').replace(/\/$/, '') || 'View Profile'}
-                                                    </a>
-                                                ) : (
-                                                    <p className="text-sm text-muted-foreground italic">Not provided</p>
-                                                )}
+                                    {/* Additional Info (Bio & LinkedIn) moved here for universal visibility - HIDDEN FOR ADMIN */}
+                                    {userDetails.role !== 'ADMIN' && (
+                                        <div className="grid grid-cols-1 gap-4 mt-4">
+                                            <div className="flex items-center gap-3">
+                                                <Globe className="h-4 w-4 text-muted-foreground" />
+                                                <div>
+                                                    <p className="text-xs text-muted-foreground">LinkedIn</p>
+                                                    {userDetails.linkedInUrl ? (
+                                                        <a
+                                                            href={userDetails.linkedInUrl.startsWith('http') ? userDetails.linkedInUrl : `https://www.linkedin.com/in/${userDetails.linkedInUrl.replace(/^\/+/, '')}`}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="text-sm font-medium text-blue-500 hover:underline"
+                                                        >
+                                                            {userDetails.linkedInUrl.replace(/^https?:\/\/(www\.)?linkedin\.com\/in\//, '').replace(/\/$/, '') || 'View Profile'}
+                                                        </a>
+                                                    ) : (
+                                                        <p className="text-sm text-muted-foreground italic">Not provided</p>
+                                                    )}
+                                                </div>
                                             </div>
-                                        </div>
 
-                                        <div className="flex items-start gap-3">
-                                            <Briefcase className="h-4 w-4 text-muted-foreground mt-1" />
-                                            <div>
-                                                <p className="text-xs text-muted-foreground">Bio</p>
-                                                <p className="text-sm text-foreground/80 whitespace-pre-wrap">
-                                                    {userDetails.bio || <span className="text-muted-foreground italic">No bio provided</span>}
-                                                </p>
+                                            <div className="flex items-start gap-3">
+                                                <Briefcase className="h-4 w-4 text-muted-foreground mt-1" />
+                                                <div>
+                                                    <p className="text-xs text-muted-foreground">Bio</p>
+                                                    <p className="text-sm text-foreground/80 whitespace-pre-wrap">
+                                                        {userDetails.bio || <span className="text-muted-foreground italic">No bio provided</span>}
+                                                    </p>
+                                                </div>
                                             </div>
                                         </div>
-                                    </div>
+                                    )}
                                     <Separator />
 
                                     {/* Timestamps */}
@@ -438,26 +465,54 @@ export function UserDetailsModal({ userId, open, onOpenChange, onAction }: UserD
 
                                     {/* Stats */}
                                     <div className="grid grid-cols-3 gap-4">
-                                        <StatCard
-                                            icon={Building2}
-                                            label={userDetails.role === 'INVESTOR' ? 'Deals (Mock)' : 'Startups'}
-                                            value={userDetails.role === 'INVESTOR' ? 0 : userDetails.startupCount}
-                                            color="purple"
-                                        />
-                                        <StatCard
-                                            icon={AlertTriangle}
-                                            label="Warnings"
-                                            value={userDetails.warningCount}
-                                            color="yellow"
-                                        />
-                                        {/* Hide Plan Stat for Investors */}
-                                        {userDetails.role !== 'INVESTOR' && (
+                                        {userDetails.role !== 'ADMIN' && (
                                             <StatCard
-                                                icon={DollarSign}
-                                                label="Plan"
-                                                value={userDetails.currentSubscription?.plan || 'FREE'}
-                                                color="blue"
+                                                icon={Building2}
+                                                label={userDetails.role === 'INVESTOR' ? 'Deals (Mock)' : 'Startups'}
+                                                value={userDetails.role === 'INVESTOR' ? 0 : userDetails.startupCount}
+                                                color="purple"
                                             />
+                                        )}
+                                        {userDetails.role === 'ADMIN' ? (
+                                            // Admin specific stats (focus on History/Security)
+                                            <>
+                                                <StatCard
+                                                    icon={Clock}
+                                                    label="Admin Actions"
+                                                    value={userDetails.moderationHistory?.length || 0}
+                                                    color="purple"
+                                                />
+                                                <StatCard
+                                                    icon={Shield}
+                                                    label="Active Sessions"
+                                                    value={userDetails.hasActiveSession ? 'Active' : 'Offline'}
+                                                    color="green"
+                                                />
+                                                <StatCard
+                                                    icon={AlertTriangle}
+                                                    label="Warnings Received"
+                                                    value={userDetails.warningCount}
+                                                    color="yellow"
+                                                />
+                                            </>
+                                        ) : (
+                                            <>
+                                                <StatCard
+                                                    icon={AlertTriangle}
+                                                    label="Warnings"
+                                                    value={userDetails.warningCount}
+                                                    color="yellow"
+                                                />
+                                                {/* Hide Plan Stat for Investors */}
+                                                {userDetails.role !== 'INVESTOR' && (
+                                                    <StatCard
+                                                        icon={DollarSign}
+                                                        label="Plan"
+                                                        value={userDetails.currentSubscription?.plan || 'FREE'}
+                                                        color="blue"
+                                                    />
+                                                )}
+                                            </>
                                         )}
                                     </div>
                                 </div>
@@ -574,7 +629,7 @@ export function UserDetailsModal({ userId, open, onOpenChange, onAction }: UserD
 
                             {/* Security Tab */}
                             {activeTab === 'security' && (
-                                <SecurityTab userId={userId} />
+                                <SecurityTab userId={userId} canManageUser={canManageUser} />
                             )}
                         </div>
                     </div>
@@ -624,7 +679,7 @@ function ActionIcon({ type }: { type: string }) {
     return icons[type] || <Clock className="h-4 w-4 text-muted-foreground" />
 }
 
-function SecurityTab({ userId }: { userId: string | null }) {
+function SecurityTab({ userId, canManageUser }: { userId: string | null, canManageUser: boolean }) {
     const [sessions, setSessions] = useState<any[]>([])
     const [loadingSessions, setLoadingSessions] = useState(false)
 
@@ -679,7 +734,7 @@ function SecurityTab({ userId }: { userId: string | null }) {
                     variant="destructive"
                     size="sm"
                     onClick={handleRevokeAll}
-                    disabled={sessions.length === 0}
+                    disabled={sessions.length === 0 || !canManageUser}
                 >
                     <Shield className="h-4 w-4 mr-2" />
                     Force Logout All
@@ -718,6 +773,7 @@ function SecurityTab({ userId }: { userId: string | null }) {
                                 size="sm"
                                 className="text-red-500 hover:text-red-600 hover:bg-red-500/10"
                                 onClick={() => handleRevokeSession(session.id)}
+                                disabled={!canManageUser}
                             >
                                 Revoke
                             </Button>

@@ -17,7 +17,7 @@ import java.util.UUID;
  */
 @RestController
 @RequestMapping("/api/v1/admin/users")
-@PreAuthorize("hasRole('ADMIN')")
+@PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
 @RequiredArgsConstructor
 public class UserModerationController {
 
@@ -57,7 +57,7 @@ public class UserModerationController {
                         @AuthenticationPrincipal User admin) {
 
                 UserModerationLog log = moderationService.suspendUser(
-                                id, admin.getId(), admin.getEmail(), request);
+                                id, admin, request);
 
                 return ResponseEntity.ok(Map.of(
                                 "message", request.isPermanent() ? "User permanently banned" : "User suspended",
@@ -77,7 +77,7 @@ public class UserModerationController {
                         @AuthenticationPrincipal User admin) {
 
                 UserModerationLog log = moderationService.warnUser(
-                                id, admin.getId(), admin.getEmail(), request);
+                                id, admin, request);
 
                 return ResponseEntity.ok(Map.of(
                                 "message", "Warning issued to user",
@@ -98,7 +98,7 @@ public class UserModerationController {
                 String reason = body != null ? body.get("reason") : "Suspension lifted by admin";
 
                 UserModerationLog log = moderationService.unsuspendUser(
-                                id, admin.getId(), admin.getEmail(), reason);
+                                id, admin, reason);
 
                 return ResponseEntity.ok(Map.of(
                                 "message", "User suspension removed",
@@ -143,14 +143,14 @@ public class UserModerationController {
 
                 if (hardDelete) {
                         // Permanently remove from database
-                        moderationService.hardDeleteUser(id);
+                        moderationService.hardDeleteUser(id, admin);
                         return ResponseEntity.ok(Map.of(
                                         "message", "User permanently deleted from database",
                                         "type", "hard"));
                 } else {
                         // Soft delete - mark as DELETED but keep in database
                         UserModerationLog log = moderationService.softDeleteUser(
-                                        id, admin.getId(), admin.getEmail(), reason);
+                                        id, admin, reason);
                         return ResponseEntity.ok(Map.of(
                                         "message", "User marked as deleted",
                                         "type", "soft",
