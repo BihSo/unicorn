@@ -15,7 +15,7 @@ import { formatDate } from '../../lib/utils'
 import {
     Building2, TrendingUp, User as UserIcon, Loader2, ChevronLeft,
     ChevronRight, ChevronsLeft, ChevronsRight, Search, Eye, Ban,
-    AlertTriangle, Trash2, Shield, Clock, Download
+    AlertTriangle, Trash2, Shield, Clock, Download, RotateCcw
 } from 'lucide-react'
 import { toast } from 'sonner'
 import api from '../../lib/axios'
@@ -567,6 +567,15 @@ export function UsersTable() {
                         </div>
 
                         <div className="flex flex-col sm:flex-row gap-2">
+                            <Button
+                                variant="outline"
+                                className="gap-2"
+                                onClick={fetchData}
+                                disabled={isLoading}
+                            >
+                                <RotateCcw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+                                Refresh
+                            </Button>
                             {/* Export Dropdown */}
                             <Dialog open={exportDialogOpen} onOpenChange={setExportDialogOpen}>
                                 <DialogTrigger asChild>

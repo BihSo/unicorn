@@ -12,7 +12,7 @@ import {
     Loader2, User, Mail, Phone, MapPin, Calendar, Shield,
     Building2, TrendingUp, CreditCard, Clock, AlertTriangle,
     Ban, CheckCircle, XCircle, DollarSign, Briefcase,
-    Monitor, Globe
+    Monitor, Globe, AlertCircle
 } from 'lucide-react'
 import { formatDate } from '../../lib/utils'
 import api from '../../lib/axios'
@@ -38,6 +38,8 @@ interface UserDetails {
     role: string
     status: string
     authProvider: string
+    bio?: string
+    linkedInUrl?: string
     createdAt: string
     updatedAt?: string
     lastLoginAt?: string
@@ -65,9 +67,11 @@ interface UserDetails {
         bio?: string
         investmentBudget?: number
         preferredIndustries?: string
+        preferredStage?: string
         linkedInUrl?: string
         isVerified: boolean
         verifiedAt?: string
+        readyForPayment: boolean
     }
     startups?: Array<{
         id: string
@@ -117,6 +121,9 @@ export function UserDetailsModal({ userId, open, onOpenChange, onAction }: UserD
             const data = response.data as UserDetails
             console.log('User Details API Response:', data)
             console.log('hasActiveSession value:', data.hasActiveSession, 'type:', typeof data.hasActiveSession)
+            console.log('investorInfo:', data.investorInfo)
+            console.log('hasInvestorProfile:', data.hasInvestorProfile)
+            console.log('role:', data.role)
             setUserDetails(data)
         } catch (error) {
             console.error('Failed to fetch user details:', error)
@@ -150,10 +157,12 @@ export function UserDetailsModal({ userId, open, onOpenChange, onAction }: UserD
             BANNED: 'bg-red-500/10 text-red-500 border-red-500/30',
             DELETED: 'bg-gray-500/10 text-gray-500 border-gray-500/30',
             PENDING: 'bg-yellow-500/10 text-yellow-500 border-yellow-500/30',
+            PENDING_VERIFICATION: 'bg-blue-500/10 text-blue-500 border-blue-500/30',
         }
         return (
-            <span className={`px-3 py-1 rounded-full text-sm font-semibold border ${styles[status] || styles.PENDING}`}>
-                {status}
+            <span className={`px-3 py-1 rounded-full text-xs font-medium border flex items-center gap-1.5 ${styles[status] || styles.PENDING}`}>
+                <span className={`h-2 w-2 rounded-full ${status === 'ACTIVE' ? 'bg-green-500' : status === 'PENDING_VERIFICATION' ? 'bg-blue-500 animate-pulse' : 'bg-current'}`}></span>
+                {status.replace('_', ' ')}
             </span>
         )
     }
@@ -206,8 +215,8 @@ export function UserDetailsModal({ userId, open, onOpenChange, onAction }: UserD
                                         alt={userDetails.displayName || userDetails.email}
                                         className="h-16 w-16 rounded-full border-2 border-primary/20"
                                     />
-                                    <div className={`absolute -bottom-0.5 -right-0.5 h-5 w-5 rounded-full border-2 border-background ${userDetails.hasActiveSession ? 'bg-green-500' : 'bg-gray-500'
-                                        }`} />
+                                    <div className={`absolute -bottom-0.5 -right-0.5 h-4 w-4 rounded-full border-2 border-background ring-1 ring-background ${userDetails.hasActiveSession ? 'bg-green-500' : 'bg-gray-300'
+                                        }`} title={userDetails.hasActiveSession ? "Online" : "Offline"} />
                                 </div>
                                 <div>
                                     <h3 className="text-lg font-bold">
@@ -217,7 +226,21 @@ export function UserDetailsModal({ userId, open, onOpenChange, onAction }: UserD
                                     <div className="flex items-center gap-2 mt-1">
                                         <Badge variant="outline">{userDetails.role}</Badge>
                                         {getStatusBadge(userDetails.status)}
-                                        {getPlanBadge(userDetails.currentSubscription?.plan || 'FREE')}
+                                        {/* Plan for Non-Investors, Verification for Investors */}
+                                        {userDetails.role !== 'INVESTOR' ? (
+                                            getPlanBadge(userDetails.currentSubscription?.plan || 'FREE')
+                                        ) : (
+                                            userDetails.investorInfo?.isVerified ? (
+                                                <Badge className="bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 border-emerald-200">
+                                                    <CheckCircle className="h-3 w-3 mr-1" />
+                                                    Verified Investor
+                                                </Badge>
+                                            ) : (
+                                                <Badge variant="outline" className="text-muted-foreground border-dashed">
+                                                    Not Verified
+                                                </Badge>
+                                            )
+                                        )}
                                     </div>
                                 </div>
                             </div>
@@ -231,24 +254,42 @@ export function UserDetailsModal({ userId, open, onOpenChange, onAction }: UserD
 
                         {/* Tabs */}
                         <div className="flex border-b mb-4">
-                            {tabs.map(tab => (
-                                <button
-                                    key={tab.id}
-                                    onClick={() => setActiveTab(tab.id)}
-                                    className={`flex items-center gap-2 px-4 py-2 text-sm font-medium border-b-2 transition-colors ${activeTab === tab.id
-                                        ? 'border-primary text-primary'
-                                        : 'border-transparent text-muted-foreground hover:text-foreground'
-                                        }`}
-                                >
-                                    <tab.icon className="h-4 w-4" />
-                                    {tab.label}
-                                    {tab.count !== undefined && tab.count > 0 && (
-                                        <span className="ml-1 px-1.5 py-0.5 text-xs bg-muted rounded-full">
-                                            {tab.count}
-                                        </span>
-                                    )}
-                                </button>
-                            ))}
+                            {tabs.map(tab => {
+                                // Rename Startups to Deals for Investors
+                                if (tab.id === 'startups' && userDetails.role === 'INVESTOR') {
+                                    return (
+                                        <button
+                                            key={tab.id}
+                                            onClick={() => setActiveTab(tab.id)}
+                                            className={`flex items-center gap-2 px-4 py-2 text-sm font-medium border-b-2 transition-colors ${activeTab === tab.id
+                                                ? 'border-primary text-primary'
+                                                : 'border-transparent text-muted-foreground hover:text-foreground'
+                                                }`}
+                                        >
+                                            <TrendingUp className="h-4 w-4" /> {/* Use TrendingUp icon for Deals */}
+                                            Deals
+                                        </button>
+                                    )
+                                }
+                                return (
+                                    <button
+                                        key={tab.id}
+                                        onClick={() => setActiveTab(tab.id)}
+                                        className={`flex items-center gap-2 px-4 py-2 text-sm font-medium border-b-2 transition-colors ${activeTab === tab.id
+                                            ? 'border-primary text-primary'
+                                            : 'border-transparent text-muted-foreground hover:text-foreground'
+                                            }`}
+                                    >
+                                        <tab.icon className="h-4 w-4" />
+                                        {tab.label}
+                                        {tab.count !== undefined && tab.count > 0 && (
+                                            <span className="ml-1 px-1.5 py-0.5 text-xs bg-muted rounded-full">
+                                                {tab.count}
+                                            </span>
+                                        )}
+                                    </button>
+                                )
+                            })}
                         </div>
 
                         {/* Tab Content */}
@@ -267,6 +308,37 @@ export function UserDetailsModal({ userId, open, onOpenChange, onAction }: UserD
                                         <InfoRow icon={Shield} label="Auth Provider" value={userDetails.authProvider} />
                                     </div>
 
+                                    {/* Additional Info (Bio & LinkedIn) moved here for universal visibility */}
+                                    <div className="grid grid-cols-1 gap-4 mt-4">
+                                        <div className="flex items-center gap-3">
+                                            <Globe className="h-4 w-4 text-muted-foreground" />
+                                            <div>
+                                                <p className="text-xs text-muted-foreground">LinkedIn</p>
+                                                {userDetails.linkedInUrl ? (
+                                                    <a
+                                                        href={userDetails.linkedInUrl.startsWith('http') ? userDetails.linkedInUrl : `https://www.linkedin.com/in/${userDetails.linkedInUrl.replace(/^\/+/, '')}`}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="text-sm font-medium text-blue-500 hover:underline"
+                                                    >
+                                                        {userDetails.linkedInUrl.replace(/^https?:\/\/(www\.)?linkedin\.com\/in\//, '').replace(/\/$/, '') || 'View Profile'}
+                                                    </a>
+                                                ) : (
+                                                    <p className="text-sm text-muted-foreground italic">Not provided</p>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        <div className="flex items-start gap-3">
+                                            <Briefcase className="h-4 w-4 text-muted-foreground mt-1" />
+                                            <div>
+                                                <p className="text-xs text-muted-foreground">Bio</p>
+                                                <p className="text-sm text-foreground/80 whitespace-pre-wrap">
+                                                    {userDetails.bio || <span className="text-muted-foreground italic">No bio provided</span>}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
                                     <Separator />
 
                                     {/* Timestamps */}
@@ -296,28 +368,71 @@ export function UserDetailsModal({ userId, open, onOpenChange, onAction }: UserD
                                         </>
                                     )}
 
+
                                     {/* Investor Profile */}
-                                    {userDetails.investorInfo && (
+                                    {userDetails.role === 'INVESTOR' && (
                                         <>
                                             <Separator />
-                                            <div className="p-4 rounded-lg bg-emerald-500/10 border border-emerald-500/30">
-                                                <h4 className="font-semibold text-emerald-500 flex items-center gap-2">
-                                                    <TrendingUp className="h-4 w-4" />
-                                                    Investor Profile
-                                                    {userDetails.investorInfo.isVerified ? (
-                                                        <CheckCircle className="h-4 w-4 text-green-500" />
-                                                    ) : (
-                                                        <XCircle className="h-4 w-4 text-red-500" />
-                                                    )}
-                                                </h4>
-                                                <div className="mt-2 space-y-1 text-sm">
-                                                    <p><strong>Budget:</strong> ${userDetails.investorInfo.investmentBudget?.toLocaleString() || 0}</p>
-                                                    <p><strong>Industries:</strong> {userDetails.investorInfo.preferredIndustries || '-'}</p>
-                                                    {userDetails.investorInfo.bio && (
-                                                        <p><strong>Bio:</strong> {userDetails.investorInfo.bio}</p>
-                                                    )}
+                                            {userDetails.investorInfo ? (
+                                                <div className="p-4 rounded-lg bg-emerald-500/10 border border-emerald-500/30">
+                                                    <h4 className="font-semibold text-emerald-500 flex items-center gap-2">
+                                                        <TrendingUp className="h-4 w-4" />
+                                                        Investor Profile
+                                                        {userDetails.investorInfo.isVerified ? (
+                                                            <CheckCircle className="h-4 w-4 text-green-500" />
+                                                        ) : (
+                                                            <span className="text-muted-foreground text-xs font-normal border px-2 py-0.5 rounded-full">Not Verified</span>
+                                                        )}
+                                                    </h4>
+                                                    <div className="mt-2 space-y-1 text-sm">
+                                                        <p><strong>Investment Budget:</strong> ${userDetails.investorInfo.investmentBudget?.toLocaleString() || 0}</p>
+                                                        <p><strong>Preferred Industries:</strong> {userDetails.investorInfo.preferredIndustries || '-'}</p>
+                                                        <p><strong>Preferred Stage:</strong> {userDetails.investorInfo.preferredStage || 'All Stages'}</p>
+                                                        <div className="flex items-center gap-2 mt-2 pt-2 border-t border-emerald-500/20">
+                                                            <p><strong>Payment Status:</strong></p>
+                                                            {userDetails.investorInfo.isVerified ? (
+                                                                <Badge className="bg-green-500 text-white">Paid & Verified</Badge>
+                                                            ) : userDetails.investorInfo.readyForPayment ? (
+                                                                <Badge className="bg-blue-500 text-white">Ready for Payment</Badge>
+                                                            ) : (
+                                                                <div className="flex items-center gap-2">
+                                                                    <Badge variant="outline" className="text-muted-foreground bg-gray-500/10">Pending Approval</Badge>
+                                                                    <Button
+                                                                        size="sm"
+                                                                        variant="outline"
+                                                                        className="h-6 text-xs border-emerald-500/50 text-emerald-600 hover:bg-emerald-500/10"
+                                                                        onClick={async () => {
+                                                                            if (!confirm('Approve this investor for payment?')) return;
+                                                                            try {
+                                                                                await api.put(`/admin/users/${userId}/approve-payment`);
+                                                                                toast.success('Investor approved for payment');
+                                                                                fetchUserDetails();
+                                                                            } catch (e) {
+                                                                                toast.error('Failed to approve payment');
+                                                                            }
+                                                                        }}
+                                                                    >
+                                                                        Approve
+                                                                    </Button>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                        {userDetails.investorInfo.verifiedAt && (
+                                                            <p><strong>Verified Since:</strong> {formatDate(userDetails.investorInfo.verifiedAt)}</p>
+                                                        )}
+                                                    </div>
                                                 </div>
-                                            </div>
+                                            ) : (
+                                                <div className="p-4 rounded-lg bg-yellow-500/10 border border-yellow-500/30">
+                                                    <h4 className="font-semibold text-yellow-500 flex items-center gap-2">
+                                                        <AlertCircle className="h-4 w-4" />
+                                                        Investor Profile Incomplete
+                                                    </h4>
+                                                    <p className="mt-2 text-sm text-muted-foreground">
+                                                        This user is registered as an investor but hasn't completed their investor profile yet.
+                                                    </p>
+                                                </div>
+                                            )}
                                         </>
                                     )}
 
@@ -325,8 +440,8 @@ export function UserDetailsModal({ userId, open, onOpenChange, onAction }: UserD
                                     <div className="grid grid-cols-3 gap-4">
                                         <StatCard
                                             icon={Building2}
-                                            label="Startups"
-                                            value={userDetails.startupCount}
+                                            label={userDetails.role === 'INVESTOR' ? 'Deals (Mock)' : 'Startups'}
+                                            value={userDetails.role === 'INVESTOR' ? 0 : userDetails.startupCount}
                                             color="purple"
                                         />
                                         <StatCard
@@ -335,45 +450,56 @@ export function UserDetailsModal({ userId, open, onOpenChange, onAction }: UserD
                                             value={userDetails.warningCount}
                                             color="yellow"
                                         />
-                                        <StatCard
-                                            icon={DollarSign}
-                                            label="Plan"
-                                            value={userDetails.currentSubscription?.plan || 'FREE'}
-                                            color="blue"
-                                        />
+                                        {/* Hide Plan Stat for Investors */}
+                                        {userDetails.role !== 'INVESTOR' && (
+                                            <StatCard
+                                                icon={DollarSign}
+                                                label="Plan"
+                                                value={userDetails.currentSubscription?.plan || 'FREE'}
+                                                color="blue"
+                                            />
+                                        )}
                                     </div>
                                 </div>
                             )}
 
-                            {/* Startups Tab */}
+                            {/* Startups/Deals Tab */}
                             {activeTab === 'startups' && (
                                 <div className="space-y-3">
-                                    {userDetails.startups && userDetails.startups.length > 0 ? (
-                                        userDetails.startups.map(startup => (
-                                            <div key={startup.id} className="p-4 rounded-lg border bg-card">
-                                                <div className="flex items-start justify-between">
-                                                    <div>
-                                                        <h4 className="font-semibold flex items-center gap-2">
-                                                            <Building2 className="h-4 w-4 text-purple-500" />
-                                                            {startup.name}
-                                                        </h4>
-                                                        <p className="text-sm text-muted-foreground">{startup.industry}</p>
-                                                    </div>
-                                                    <Badge variant="outline">{startup.status}</Badge>
-                                                </div>
-                                                <div className="mt-2 flex items-center gap-4 text-xs text-muted-foreground">
-                                                    <span>Stage: {startup.stage}</span>
-                                                    <span>Raised: ${startup.raisedAmount?.toLocaleString() || 0}</span>
-                                                    {startup.createdAt && <span>Created: {formatDate(startup.createdAt)}</span>}
-                                                </div>
-                                            </div>
-                                        ))
-                                    ) : (
-                                        <div className="text-center py-8 text-muted-foreground">
-                                            <Briefcase className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                                            <p>No startups associated</p>
+                                    {userDetails.role === 'INVESTOR' ? (
+                                        <div className="text-center py-12 text-muted-foreground bg-muted/20 rounded-lg border border-dashed">
+                                            <TrendingUp className="h-12 w-12 mx-auto mb-2 opacity-50 text-emerald-500" />
+                                            <h4 className="text-lg font-semibold text-foreground">Deals Tracking</h4>
+                                            <p className="text-sm">Investment deals history will be available here soon.</p>
+                                            <Badge variant="outline" className="mt-2">Coming Soon</Badge>
                                         </div>
-                                    )}
+                                    ) : (
+                                        userDetails.startups && userDetails.startups.length > 0 ? (
+                                            userDetails.startups.map(startup => (
+                                                <div key={startup.id} className="p-4 rounded-lg border bg-card">
+                                                    <div className="flex items-start justify-between">
+                                                        <div>
+                                                            <h4 className="font-semibold flex items-center gap-2">
+                                                                <Building2 className="h-4 w-4 text-purple-500" />
+                                                                {startup.name}
+                                                            </h4>
+                                                            <p className="text-sm text-muted-foreground">{startup.industry}</p>
+                                                        </div>
+                                                        <Badge variant="outline">{startup.status}</Badge>
+                                                    </div>
+                                                    <div className="mt-2 flex items-center gap-4 text-xs text-muted-foreground">
+                                                        <span>Stage: {startup.stage}</span>
+                                                        <span>Raised: ${startup.raisedAmount?.toLocaleString() || 0}</span>
+                                                        {startup.createdAt && <span>Created: {formatDate(startup.createdAt)}</span>}
+                                                    </div>
+                                                </div>
+                                            ))
+                                        ) : (
+                                            <div className="text-center py-8 text-muted-foreground">
+                                                <Briefcase className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                                                <p>No startups associated</p>
+                                            </div>
+                                        ))}
                                 </div>
                             )}
 

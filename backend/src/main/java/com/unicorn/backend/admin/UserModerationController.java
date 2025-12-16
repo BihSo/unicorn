@@ -106,6 +106,23 @@ public class UserModerationController {
         }
 
         /**
+         * Approve investor for payment.
+         *
+         * PUT /api/v1/admin/users/{id}/approve-payment
+         */
+        @PutMapping("/{id}/approve-payment")
+        public ResponseEntity<Map<String, Object>> approveInvestorPayment(
+                        @PathVariable UUID id,
+                        @AuthenticationPrincipal User admin) {
+
+                moderationService.approveInvestorForPayment(id, admin.getId(), admin.getEmail());
+
+                return ResponseEntity.ok(Map.of(
+                                "message", "Investor approved for payment",
+                                "userId", id.toString()));
+        }
+
+        /**
          * Delete a user (soft or hard delete).
          * 
          * DELETE /api/v1/admin/users/{id}

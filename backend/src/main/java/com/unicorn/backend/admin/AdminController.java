@@ -261,6 +261,7 @@ public class AdminController {
     /**
      * Get all startups (paginated) for admin management.
      */
+
     @GetMapping("/startups/all")
     public ResponseEntity<Page<StartupResponse>> getAllStartups(
             @RequestParam(required = false) String industry,

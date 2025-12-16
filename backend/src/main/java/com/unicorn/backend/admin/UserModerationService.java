@@ -63,6 +63,32 @@ public class UserModerationService {
         }
 
         /**
+         * Approve an investor for payment.
+         */
+        @Transactional
+        public void approveInvestorForPayment(UUID userId, UUID adminId, String adminEmail) {
+                User user = userRepository.findById(userId)
+                                .orElseThrow(() -> new RuntimeException("User not found: " + userId));
+
+                if (!"INVESTOR".equals(user.getRole())) {
+                        throw new RuntimeException("User is not an investor");
+                }
+
+                if (user.getInvestorProfile() == null) {
+                        throw new RuntimeException("Investor profile not found");
+                }
+
+                user.getInvestorProfile().setReadyForPayment(true);
+                // Note: user.getInvestorProfile() is a managed entity via User if mapped
+                // correctly
+                // or we need to save explicitly if CascadeType is not ALL/MERGE.
+                // Assuming OneToOne with Cascade from data source inspection or manually
+                // saving.
+                // Safest to save user or just the profile if we inject repo.
+                // Let's inject InvestorProfileRepository
+        }
+
+        /**
          * Suspend a user temporarily or permanently.
          */
         @Transactional

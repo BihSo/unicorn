@@ -47,7 +47,7 @@ public class StatsController {
         long activeInvestors = investorProfileRepository.count();
 
         // Count pending investor verifications
-        long pendingVerifications = investorProfileRepository.countByIsVerifiedFalse();
+        long pendingVerifications = investorProfileRepository.countPendingVerifications();
 
         // Calculate MRR
         BigDecimal mrr = subscriptionService.calculateMRR();

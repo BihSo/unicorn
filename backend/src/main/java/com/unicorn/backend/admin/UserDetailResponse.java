@@ -38,6 +38,9 @@ public class UserDetailResponse {
     private String status;
     private String authProvider;
 
+    private String bio;
+    private String linkedInUrl;
+
     // Timestamps
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
@@ -101,6 +104,8 @@ public class UserDetailResponse {
         private String linkedInUrl;
         private boolean isVerified;
         private LocalDateTime verifiedAt;
+        private boolean readyForPayment;
+        private String preferredStage;
     }
 
     @Data
@@ -151,6 +156,10 @@ public class UserDetailResponse {
                 .role(user.getRole())
                 .status(user.getStatus())
                 .authProvider(user.getAuthProvider())
+                .bio(user.getBio() != null && !user.getBio().isEmpty() ? user.getBio()
+                        : (user.getInvestorProfile() != null ? user.getInvestorProfile().getBio() : null))
+                .linkedInUrl(user.getLinkedInUrl() != null && !user.getLinkedInUrl().isEmpty() ? user.getLinkedInUrl()
+                        : (user.getInvestorProfile() != null ? user.getInvestorProfile().getLinkedInUrl() : null))
                 .createdAt(user.getCreatedAt())
                 .updatedAt(user.getUpdatedAt())
                 .lastLoginAt(user.getLastLoginAt())
@@ -193,12 +202,16 @@ public class UserDetailResponse {
         if (investorProfile != null) {
             builder.investorInfo(InvestorInfo.builder()
                     .id(investorProfile.getId())
-                    .bio(investorProfile.getBio())
+                    .bio(user.getBio()) // Use User bio
                     .investmentBudget(investorProfile.getInvestmentBudget())
                     .preferredIndustries(investorProfile.getPreferredIndustries())
-                    .linkedInUrl(investorProfile.getLinkedInUrl())
+                    .linkedInUrl(user.getLinkedInUrl()) // Use User LinkedIn
                     .isVerified(Boolean.TRUE.equals(investorProfile.getIsVerified()))
                     .verifiedAt(investorProfile.getVerifiedAt())
+                    .readyForPayment(Boolean.TRUE.equals(investorProfile.getReadyForPayment()))
+                    .preferredStage(
+                            investorProfile.getPreferredStage() != null ? investorProfile.getPreferredStage().name()
+                                    : null)
                     .build());
         }
 

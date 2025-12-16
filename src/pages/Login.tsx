@@ -83,11 +83,11 @@ const Login: React.FC = () => {
                             </div>
                         )}
                         <div className="space-y-2">
-                            <Label htmlFor="email">Email</Label>
+                            <Label htmlFor="email">Email or Username</Label>
                             <Input
                                 id="email"
-                                type="email"
-                                placeholder="admin@unicorn.com"
+                                type="text"
+                                placeholder="Email or username"
                                 value={email}
                                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
                                 required

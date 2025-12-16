@@ -32,15 +32,30 @@ public interface InvestorProfileRepository extends JpaRepository<InvestorProfile
     /**
      * Count investors with isVerified = false.
      */
-    long countByIsVerifiedFalse();
+    @org.springframework.data.jpa.repository.Query("SELECT COUNT(i.id) FROM InvestorProfile i WHERE i.isVerified = false")
+    long countPendingVerifications();
 
     /**
      * Find investors who requested verification but are not yet verified.
      */
-    java.util.List<InvestorProfile> findByVerificationRequestedTrueAndIsVerifiedFalseOrderByVerificationRequestedAtAsc();
+    @org.springframework.data.jpa.repository.Query("SELECT i FROM InvestorProfile i WHERE i.verificationRequested = true AND i.isVerified = false ORDER BY i.verificationRequestedAt ASC")
+    java.util.List<InvestorProfile> findPendingVerificationQueue();
 
     /**
      * Find all verified investors.
      */
-    java.util.List<InvestorProfile> findByIsVerifiedTrue();
+    @org.springframework.data.jpa.repository.Query("SELECT i FROM InvestorProfile i WHERE i.isVerified = true")
+    java.util.List<InvestorProfile> findVerifiedInvestors();
+
+    /**
+     * Count investors with isVerified = true.
+     */
+    @org.springframework.data.jpa.repository.Query("SELECT COUNT(i.id) FROM InvestorProfile i WHERE i.isVerified = true")
+    long countVerifiedInvestors();
+
+    /**
+     * Sum of investment budget across all profiles.
+     */
+    @org.springframework.data.jpa.repository.Query("SELECT SUM(i.investmentBudget) FROM InvestorProfile i")
+    java.math.BigDecimal sumInvestmentBudget();
 }

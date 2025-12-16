@@ -23,30 +23,99 @@ public class AuthenticationService {
         private final RefreshTokenService refreshTokenService;
         private final org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
         private final AvatarService avatarService;
+        private final com.unicorn.backend.investor.InvestorProfileRepository investorProfileRepository;
+
+        private final com.unicorn.backend.service.EmailService emailService;
+        private final com.unicorn.backend.appconfig.AppConfigService appConfigService;
+        private final UserOneTimePasswordRepository userOneTimePasswordRepository;
 
         public AuthenticationService(AuthenticationManager authenticationManager, UserRepository userRepository,
                         JwtService jwtService, RefreshTokenService refreshTokenService,
                         org.springframework.security.crypto.password.PasswordEncoder passwordEncoder,
-                        AvatarService avatarService) {
+                        AvatarService avatarService,
+                        com.unicorn.backend.investor.InvestorProfileRepository investorProfileRepository,
+                        com.unicorn.backend.service.EmailService emailService,
+                        com.unicorn.backend.appconfig.AppConfigService appConfigService,
+                        UserOneTimePasswordRepository userOneTimePasswordRepository) {
                 this.authenticationManager = authenticationManager;
                 this.userRepository = userRepository;
                 this.jwtService = jwtService;
                 this.refreshTokenService = refreshTokenService;
                 this.passwordEncoder = passwordEncoder;
                 this.avatarService = avatarService;
+                this.investorProfileRepository = investorProfileRepository;
+                this.emailService = emailService;
+                this.appConfigService = appConfigService;
+                this.userOneTimePasswordRepository = userOneTimePasswordRepository;
         }
 
         public LoginResponse register(RegisterRequest request, HttpServletRequest httpRequest) {
+                User user;
                 if (userRepository.existsByEmail(request.email())) {
-                        throw new IllegalArgumentException("Email already in use");
+                        User existingUser = userRepository.findByEmail(request.email()).get();
+
+                        // Allow if PENDING_VERIFICATION (Existing Logic) OR DELETED (New Logic)
+                        boolean isPending = "PENDING_VERIFICATION".equals(existingUser.getStatus());
+                        boolean isDeleted = "DELETED".equals(existingUser.getStatus());
+
+                        if (!isPending && !isDeleted) {
+                                throw new IllegalArgumentException("Email already in use");
+                        }
+
+                        // RECLAIM LOGIC: Overwrite existing user
+                        user = existingUser;
+
+                        // If DELETED, reset critical fields for fresh start
+                        if (isDeleted) {
+                                user.setDeletedAt(null);
+                                user.setDeletionReason(null);
+                        }
+
+                        // Clean up previous OTP if exists
+                        userOneTimePasswordRepository.findByUser(user).ifPresent(userOneTimePasswordRepository::delete);
+                } else {
+                        user = new User();
+                        user.setEmail(request.email());
                 }
 
-                User user = new User();
-                user.setEmail(request.email());
                 user.setPasswordHash(passwordEncoder.encode(request.password()));
                 user.setRole(request.role() != null ? request.role().toUpperCase() : "USER");
-                user.setStatus("ACTIVE");
+                user.setStatus("PENDING_VERIFICATION");
                 user.setAuthProvider("LOCAL");
+                user.setFirstName(request.firstName());
+                user.setLastName(request.lastName());
+                user.setPhoneNumber(request.phoneNumber());
+                user.setCountry(request.country());
+                user.setPhoneNumber(request.phoneNumber());
+                user.setCountry(request.country());
+
+                // Bio Validation
+                if (request.bio() != null) {
+                        int maxBioLength = appConfigService.getIntValue("max_bio_length", 250);
+                        if (request.bio().length() > maxBioLength) {
+                                throw new IllegalArgumentException(
+                                                "Bio must not exceed " + maxBioLength + " characters");
+                        }
+                }
+                user.setBio(request.bio());
+
+                // Sanitize and prefix LinkedIn URL
+                String linkedInInput = request.linkedInUrl();
+                if (linkedInInput != null && !linkedInInput.trim().isEmpty()) {
+                        String cleanInput = linkedInInput.trim();
+                        if (!cleanInput.toLowerCase().startsWith("http")) {
+                                // Assume it's a username or partial path
+                                if (!cleanInput.toLowerCase().contains("linkedin.com")) {
+                                        cleanInput = "https://www.linkedin.com/in/" + cleanInput.replace("/", "");
+                                } else {
+                                        // It has linkedin.com but no http
+                                        cleanInput = "https://" + cleanInput;
+                                }
+                        }
+                        user.setLinkedInUrl(cleanInput);
+                } else {
+                        user.setLinkedInUrl(null);
+                }
 
                 // Handle Username Logic
                 String finalUsername;
@@ -55,9 +124,6 @@ public class AuthenticationService {
                         String sanitized = request.username().trim().toLowerCase();
 
                         // Validation Regex
-                        // 1. Starts with a letter [a-z]
-                        // 2. Contains only [a-z0-9-_]
-                        // 3. No consecutive special chars [-_]
                         String usernameRegex = "^[a-z](?!.*[-_]{2})[a-z0-9-_]*$";
 
                         if (!sanitized.matches(usernameRegex)) {
@@ -65,71 +131,107 @@ public class AuthenticationService {
                                                 "Username must start with a letter, contain only lowercase letters, numbers, dashes, or underscores, and cannot have consecutive special characters.");
                         }
 
+                        // Check if username exists and belongs to ANOTHER user
                         if (userRepository.existsByUsername(sanitized)) {
-                                throw new IllegalArgumentException("Username already exists");
+                                User owner = userRepository.findByUsername(sanitized).orElse(null);
+                                if (owner != null && !owner.getId().equals(user.getId())) {
+                                        throw new IllegalArgumentException("Username already exists");
+                                }
                         }
                         finalUsername = sanitized;
                 } else {
                         // Generate username from email prefix
                         String emailPrefix = request.email().split("@")[0].toLowerCase();
-
-                        // Sanitize for generation: replace dots with underscore, remove invalid chars
                         String base = emailPrefix.replace(".", "_").replaceAll("[^a-z0-9-_]", "");
-
-                        // Ensure starts with letter
                         if (base.isEmpty() || !base.matches("^[a-z].*")) {
                                 base = "u" + base;
                         }
-
-                        // Fix consecutive special chars
                         base = base.replaceAll("[-_]{2,}", "_");
-
                         finalUsername = base;
 
-                        // If generated username exists, append numbers until unique
                         if (userRepository.existsByUsername(finalUsername)) {
-                                int attempts = 0;
-                                while (userRepository.existsByUsername(finalUsername) && attempts < 10) {
-                                        String randomSuffix = String.valueOf((int) (Math.random() * 1000));
-                                        finalUsername = base + randomSuffix;
-                                        attempts++;
-                                }
-                                // Fallback purely random if still colliding
-                                if (userRepository.existsByUsername(finalUsername)) {
-                                        finalUsername = base + System.currentTimeMillis();
+                                User owner = userRepository.findByUsername(finalUsername).orElse(null);
+                                if (owner != null && !owner.getId().equals(user.getId())) {
+                                        int attempts = 0;
+                                        while (userRepository.existsByUsername(finalUsername) && attempts < 10) {
+                                                String randomSuffix = String.valueOf((int) (Math.random() * 1000));
+                                                finalUsername = base + randomSuffix;
+                                                attempts++;
+                                        }
+                                        if (userRepository.existsByUsername(finalUsername)) {
+                                                finalUsername = base + System.currentTimeMillis();
+                                        }
                                 }
                         }
                 }
                 user.setUsername(finalUsername);
 
-                User savedUser = userRepository.save(user);
+                System.out.println("DEBUG: Saving user " + user.getEmail() + " with status: " + user.getStatus());
+                User savedUser = userRepository.saveAndFlush(user);
+                System.out.println("DEBUG: Saved user status: " + savedUser.getStatus());
 
-                // Set default avatar
+                // Set default avatar only if not set (or overwrite for reclaim)
                 savedUser.setAvatarUrl(avatarService.getRandomAvatar(savedUser.getId()));
-                savedUser = userRepository.save(savedUser);
+                savedUser = userRepository.saveAndFlush(savedUser);
 
-                // Auto-login after register
-                String jwtToken = jwtService.generateAccessToken(user);
-                RefreshToken refreshToken = refreshTokenService.createRefreshToken(
-                                user,
-                                httpRequest.getHeader("User-Agent"),
-                                httpRequest.getRemoteAddr());
+                // Create Investor Profile if role is INVESTOR
+                if ("INVESTOR".equals(savedUser.getRole())) {
+                        com.unicorn.backend.investor.InvestorProfile profile = investorProfileRepository
+                                        .findByUser(savedUser)
+                                        .orElse(new com.unicorn.backend.investor.InvestorProfile());
+                        profile.setUser(savedUser);
+                        profile.setInvestmentBudget(request.investmentBudget());
+                        profile.setPreferredIndustries(request.preferredIndustries());
+                        if (request.preferredStage() != null && !request.preferredStage().isEmpty()) {
+                                try {
+                                        profile.setPreferredStage(com.unicorn.backend.startup.Stage
+                                                        .valueOf(request.preferredStage()));
+                                } catch (IllegalArgumentException e) {
+                                        // Ignore invalid stage or handle error
+                                }
+                        }
+                        profile.setVerificationRequested(true);
+                        profile.setVerificationRequestedAt(LocalDateTime.now());
+                        investorProfileRepository.save(profile);
+                }
 
-                return new LoginResponse(
-                                jwtToken,
-                                refreshToken.getToken(),
-                                user.getUsername(),
-                                user.getId(),
-                                null,
-                                user.getCanAccessDashboard());
+                // Generate OTP
+                String otp = String.valueOf((int) (Math.random() * 900000) + 100000); // 6 digit OTP
+                UserOneTimePassword otpEntity = new UserOneTimePassword(savedUser, otp, 15); // 15 mins expiry
+                userOneTimePasswordRepository.save(otpEntity);
+
+                // Send Email
+                emailService.sendOtp(savedUser.getEmail(), otp);
+
+                // Return Empty Response or Partial (No Tokens)
+                return new LoginResponse(null, null, savedUser.getUsername(), savedUser.getId(),
+                                null, false);
         }
 
         public LoginResponse login(LoginRequest request, HttpServletRequest httpRequest) {
-                authenticationManager.authenticate(
-                                new UsernamePasswordAuthenticationToken(request.email(), request.password()));
+                // 1. Resolve User first (by Email or Username)
+                String input = request.email();
+                User user;
 
-                User user = userRepository.findByEmail(request.email())
-                                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+                if (input.contains("@")) {
+                        user = userRepository.findByEmail(input)
+                                        .orElseThrow(() -> new IllegalArgumentException("User not found"));
+                } else {
+                        user = userRepository.findByUsername(input)
+                                        .orElseThrow(() -> new IllegalArgumentException("User not found"));
+                }
+
+                // 2. Authenticate using the resolved Email (as UserDetailsService likely
+                // expects email)
+                authenticationManager.authenticate(
+                                new UsernamePasswordAuthenticationToken(user.getEmail(), request.password()));
+
+                if (!user.isEnabled()) {
+                        if ("PENDING_VERIFICATION".equals(user.getStatus())) {
+                                throw new org.springframework.security.authentication.DisabledException(
+                                                "Account not verified");
+                        }
+                }
 
                 user.setLastLoginAt(LocalDateTime.now());
 
@@ -166,5 +268,44 @@ public class AuthenticationService {
                                                         user.getCanAccessDashboard());
                                 })
                                 .orElseThrow(() -> new IllegalArgumentException("Refresh token is not in database!"));
+        }
+
+        public LoginResponse verify(String email, String otp, HttpServletRequest httpRequest) {
+                User user = userRepository.findByEmail(email)
+                                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+                UserOneTimePassword otpEntity = userOneTimePasswordRepository.findByUser(user)
+                                .orElseThrow(() -> new IllegalArgumentException("Invalid or expired OTP"));
+
+                if (otpEntity.isExpired()) {
+                        throw new IllegalArgumentException("OTP has expired");
+                }
+
+                if (!otpEntity.getOtpCode().equals(otp)) {
+                        throw new IllegalArgumentException("Invalid OTP");
+                }
+
+                // Verify Success
+                user.setStatus("ACTIVE");
+                user.setLastLoginAt(LocalDateTime.now());
+                userRepository.save(user);
+
+                // Cleanup OTP
+                userOneTimePasswordRepository.delete(otpEntity);
+
+                // Generate Tokens
+                String jwtToken = jwtService.generateAccessToken(user);
+                RefreshToken refreshToken = refreshTokenService.createRefreshToken(
+                                user,
+                                httpRequest.getHeader("User-Agent"),
+                                httpRequest.getRemoteAddr());
+
+                return new LoginResponse(
+                                jwtToken,
+                                refreshToken.getToken(),
+                                user.getUsername(),
+                                user.getId(),
+                                null,
+                                user.getCanAccessDashboard());
         }
 }

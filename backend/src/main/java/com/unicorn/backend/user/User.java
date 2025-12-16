@@ -54,6 +54,12 @@ public class User implements UserDetails {
     @Column(name = "avatar_url", length = 500)
     private String avatarUrl;
 
+    @Column(columnDefinition = "TEXT")
+    private String bio;
+
+    @Column(name = "linkedin_url")
+    private String linkedInUrl;
+
     @Column(nullable = false)
     private String passwordHash;
 
@@ -62,7 +68,7 @@ public class User implements UserDetails {
     }
 
     @Column(nullable = false, length = 20)
-    private String role; // "ADMIN" or "USER"
+    private String role;
 
     @Column(nullable = false, length = 20)
     private String status;
@@ -107,6 +113,9 @@ public class User implements UserDetails {
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<com.unicorn.backend.security.RefreshToken> refreshTokens;
 
+    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    private com.unicorn.backend.auth.UserOneTimePassword oneTimePassword;
+
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         if (this.role == null) {
@@ -149,8 +158,6 @@ public class User implements UserDetails {
     }
 
     public Boolean getCanAccessDashboard() {
-        return "ADMIN".equals(this.role) ||
-                "STARTUP_OWNER".equals(this.role) ||
-                "INVESTOR".equals(this.role);
+        return "ADMIN".equals(this.role);
     }
 }

@@ -139,10 +139,12 @@ public class AppConfigService {
         // Limits
         upsertIfNotExists("max_post_length", "2000", "Maximum post content length", "limits", "NUMBER");
         upsertIfNotExists("max_comment_length", "1000", "Maximum comment length", "limits", "NUMBER");
+        upsertIfNotExists("max_bio_length", "250", "Maximum user bio length", "limits", "NUMBER");
         upsertIfNotExists("nudge_limit_free", "4", "Weekly nudge limit for free users", "limits", "NUMBER");
         upsertIfNotExists("nudge_limit_pro", "12", "Flexible nudge limit for pro users", "limits", "NUMBER");
 
         // System
+        upsertIfNotExists("maintenance_mode", "false", "Enable maintenance mode", "system", "BOOLEAN");
         upsertIfNotExists("config_version", "1", "Configuration version for mobile app sync", "system", "NUMBER");
     }
 

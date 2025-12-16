@@ -65,7 +65,7 @@ interface UserFiltersProps {
 }
 
 const ROLES = ['ADMIN', 'INVESTOR', 'STARTUP_OWNER'] as const
-const STATUSES = ['ACTIVE', 'SUSPENDED', 'BANNED', 'DELETED'] as const
+const STATUSES = ['ACTIVE', 'SUSPENDED', 'BANNED', 'DELETED', 'PENDING_VERIFICATION'] as const
 const AUTH_PROVIDERS = ['LOCAL', 'GOOGLE'] as const
 
 // Helper component for filter row with negate toggle

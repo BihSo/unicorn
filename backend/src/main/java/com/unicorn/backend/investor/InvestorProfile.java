@@ -1,5 +1,6 @@
 package com.unicorn.backend.investor;
 
+import com.unicorn.backend.startup.Stage;
 import com.unicorn.backend.user.User;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -41,6 +42,10 @@ public class InvestorProfile {
     @Column(length = 500)
     private String preferredIndustries;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "preferred_stage", length = 20)
+    private Stage preferredStage;
+
     @Column
     private String linkedInUrl;
 
@@ -52,6 +57,10 @@ public class InvestorProfile {
     @Column(name = "verification_requested")
     @Builder.Default
     private Boolean verificationRequested = false;
+
+    @Column(name = "ready_for_payment")
+    @Builder.Default
+    private Boolean readyForPayment = false;
 
     @Column(name = "verification_requested_at")
     private LocalDateTime verificationRequestedAt;

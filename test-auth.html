@@ -153,6 +153,33 @@
             </div>
 
             <form id="registerForm">
+                <div class="form-group" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <div>
+                        <label for="regFirstName">الاسم الأول</label>
+                        <input type="text" id="regFirstName" placeholder="John">
+                    </div>
+                    <div>
+                        <label for="regLastName">اسم العائلة</label>
+                        <input type="text" id="regLastName" placeholder="Doe">
+                    </div>
+                </div>
+
+                <div class="form-group" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <div>
+                        <label for="regPhoneNumber">رقم الهاتف</label>
+                        <input type="tel" id="regPhoneNumber" placeholder="+1234567890">
+                    </div>
+                    <div>
+                        <label for="regCountry">الدولة</label>
+                        <input type="text" id="regCountry" placeholder="Egypt">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="regUsername">اسم المستخدم (Username)</label>
+                    <input type="text" id="regUsername" placeholder="john_doe_123">
+                </div>
+
                 <div class="form-group">
                     <label for="regEmail">البريد الإلكتروني</label>
                     <input type="email" id="regEmail" placeholder="example@unicorn.com" required>
@@ -173,10 +200,71 @@
                     </select>
                 </div>
 
+                <div class="form-group">
+                    <label for="regBio">نبذة عنك (Bio/About)</label>
+                    <textarea id="regBio" rows="3" placeholder="اكتب نبذة مختصرة عنك..."
+                        style="width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 14px;"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="regLinkedIn">رابط لينكد إن أو اسم المستخدم (LinkedIn URL/Username)</label>
+                    <input type="text" id="regLinkedIn" placeholder="username or https://linkedin.com/in/username">
+                </div>
+
+                <!-- Investor Details Section (Hidden by default) -->
+                <div id="investorFields"
+                    style="display: none; background: #e8f5e9; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                    <h3 style="margin-bottom: 15px; color: #2e7d32; font-size: 16px;">💼 بيانات المستثمر</h3>
+
+                    <div class="form-group">
+                        <label for="regBudget">ميزانية الاستثمار (Investment Budget)</label>
+                        <input type="number" id="regBudget" placeholder="e.g. 50000">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="regIndustries">الصناعات المفضلة (Preferred Industries)</label>
+                        <input type="text" id="regIndustries" placeholder="e.g. Tech, Health, AI">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="regStage">المرحلة المفضلة (Preferred Stage)</label>
+                        <select id="regStage">
+                            <option value="">اختر المرحلة...</option>
+                            <option value="IDEA">فكرة (Idea)</option>
+                            <option value="MVP">نموذج أولي (MVP)</option>
+                            <option value="GROWTH">نمو (Growth)</option>
+                            <option value="SCALING">توسع (Scaling)</option>
+                            <option value="ALL">كل المراحل (All Stages)</option>
+                        </select>
+                    </div>
+                </div>
+
                 <button type="submit">📝 تسجيل</button>
             </form>
 
             <div id="registerResponse" class="response"></div>
+        </div>
+
+        <!-- Verify Email Card -->
+        <div class="card" id="verifyCard" style="display: none;">
+            <h2>🔐 تفعيل الحساب (OTP)</h2>
+            <div class="info">
+                <strong>الخطوة التالية:</strong> أدخل الكود الذي ظهر في Console السيرفر
+            </div>
+            <form id="verifyForm">
+                <div class="form-group">
+                    <label for="verifyEmail">البريد الإلكتروني</label>
+                    <input type="email" id="verifyEmail" readonly style="background-color: #f0f0f0;">
+                </div>
+                <div class="form-group">
+                    <label for="verifyOtp">رمز التحقق (OTP)</label>
+                    <input type="text" id="verifyOtp" placeholder="123456" required maxlength="6"
+                        style="letter-spacing: 5px; font-size: 18px; text-align: center;">
+                </div>
+                <button type="submit" style="background: linear-gradient(135deg, #00b09b 0%, #96c93d 100%);">✅ تفعيل
+                    الحساب</button>
+            </form>
+            <div id="verifyResponse" class="response"></div>
         </div>
 
         <!-- Login Card -->
@@ -208,13 +296,38 @@
     <script>
         const API_URL = 'http://localhost:9090/api/v1/auth';
 
+        // Toggle Investor Fields
+        document.getElementById('regRole').addEventListener('change', (e) => {
+            const investorFields = document.getElementById('investorFields');
+            if (e.target.value === 'INVESTOR') {
+                investorFields.style.display = 'block';
+            } else {
+                investorFields.style.display = 'none';
+            }
+        });
+
         // Register Form Handler
         document.getElementById('registerForm').addEventListener('submit', async (e) => {
             e.preventDefault();
 
+            const firstName = document.getElementById('regFirstName').value;
+            const lastName = document.getElementById('regLastName').value;
+            const phoneNumber = document.getElementById('regPhoneNumber').value;
+            const country = document.getElementById('regCountry').value;
+            const username = document.getElementById('regUsername').value;
             const email = document.getElementById('regEmail').value;
             const password = document.getElementById('regPassword').value;
             const role = document.getElementById('regRole').value;
+
+            // New Fields
+            const bio = document.getElementById('regBio').value;
+            const linkedInUrl = document.getElementById('regLinkedIn').value;
+
+            // Investor Fields
+            const investmentBudget = role === 'INVESTOR' ? document.getElementById('regBudget').value : null;
+            const preferredIndustries = role === 'INVESTOR' ? document.getElementById('regIndustries').value : null;
+            const preferredStage = role === 'INVESTOR' ? document.getElementById('regStage').value : null;
+
             const responseDiv = document.getElementById('registerResponse');
 
             try {
@@ -223,7 +336,21 @@
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify({ email, password, role })
+                    body: JSON.stringify({
+                        email,
+                        password,
+                        role,
+                        firstName,
+                        lastName,
+                        phoneNumber,
+                        country,
+                        username,
+                        bio,
+                        linkedInUrl,
+                        investmentBudget,
+                        preferredIndustries,
+                        preferredStage
+                    })
                 });
 
                 const data = await response.json();
@@ -232,11 +359,20 @@
                     responseDiv.className = 'response success';
                     responseDiv.style.display = 'block';
                     responseDiv.innerHTML = `
-                        <strong>✅ تم التسجيل بنجاح!</strong>
-                        <pre>${JSON.stringify(data, null, 2)}</pre>
-                        <p style="margin-top: 10px;"><strong>Access Token:</strong> ${data.accessToken}</p>
+                        <strong>✅ تم التسجيل المبدئي!</strong>
+                        <p>${data.message || 'Verification code sent to email'}</p>
+                        <p style="font-size: 12px; color: #666;">Check Server Console for OTP</p>
                     `;
-                    document.getElementById('registerForm').reset();
+
+                    // Show Verify Card
+                    const verifyCard = document.getElementById('verifyCard');
+                    verifyCard.style.display = 'block';
+                    document.getElementById('verifyEmail').value = email;
+                    document.getElementById('verifyOtp').focus();
+
+                    // Scroll to verify card
+                    verifyCard.scrollIntoView({ behavior: 'smooth' });
+
                 } else {
                     throw new Error(data.error || 'Registration failed');
                 }
@@ -245,6 +381,45 @@
                 responseDiv.style.display = 'block';
                 responseDiv.innerHTML = `
                     <strong>❌ فشل التسجيل</strong>
+                    <p>${error.message}</p>
+                `;
+            }
+        });
+
+        // Verify Form Handler
+        document.getElementById('verifyForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('verifyEmail').value;
+            const otp = document.getElementById('verifyOtp').value;
+            const responseDiv = document.getElementById('verifyResponse');
+
+            try {
+                const response = await fetch(`${API_URL}/verify`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, otp })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    responseDiv.className = 'response success';
+                    responseDiv.style.display = 'block';
+                    responseDiv.innerHTML = `
+                        <strong>✅ تم تفعيل الحساب بنجاح!</strong>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                        <p style="margin-top: 10px;"><strong>Access Token:</strong> ${data.accessToken}</p>
+                    `;
+                    // Fill login
+                    document.getElementById('loginEmail').value = email;
+                } else {
+                    throw new Error(data.error || 'Verification failed');
+                }
+            } catch (error) {
+                responseDiv.className = 'response error';
+                responseDiv.style.display = 'block';
+                responseDiv.innerHTML = `
+                    <strong>❌ فشل التفعيل</strong>
                     <p>${error.message}</p>
                 `;
             }

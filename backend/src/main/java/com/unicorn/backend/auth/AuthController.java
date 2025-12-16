@@ -14,9 +14,17 @@ public class AuthController {
         this.service = service;
     }
 
+    public record VerifyRequest(String email, String otp) {
+    }
+
     @PostMapping("/login")
     public ResponseEntity<LoginResponse> login(@RequestBody LoginRequest request, HttpServletRequest httpRequest) {
         return ResponseEntity.ok(service.login(request, httpRequest));
+    }
+
+    @PostMapping("/verify")
+    public ResponseEntity<LoginResponse> verify(@RequestBody VerifyRequest request, HttpServletRequest httpRequest) {
+        return ResponseEntity.ok(service.verify(request.email(), request.otp(), httpRequest));
     }
 
     @PostMapping("/register")

@@ -145,11 +145,25 @@ export interface InvestorVerification {
     verificationRequestedAt: string;
 }
 
+export interface InvestorStats {
+    totalInvestors: number;
+    verifiedInvestors: number;
+    pendingVerifications: number;
+    totalInvestmentBudget: number;
+}
+
 export async function fetchVerificationQueue(): Promise<InvestorVerification[]> {
     const response = await fetch(`${API_BASE_URL}/admin/investors/queue`, {
         headers: createHeaders(),
     });
     return handleResponse<InvestorVerification[]>(response);
+}
+
+export async function fetchInvestorStats(): Promise<InvestorStats> {
+    const response = await fetch(`${API_BASE_URL}/admin/investors/stats`, {
+        headers: createHeaders(),
+    });
+    return handleResponse<InvestorStats>(response);
 }
 
 export async function approveInvestorForPayment(id: string): Promise<{ message: string }> {

@@ -1,6 +1,7 @@
 package com.unicorn.backend.investor;
 
 import com.unicorn.backend.user.User;
+import com.unicorn.backend.appconfig.AppConfigService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -13,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class InvestorProfileService {
 
     private final InvestorProfileRepository investorProfileRepository;
+    private final AppConfigService appConfigService;
 
     /**
      * Create or update an investor profile for the authenticated user.
@@ -28,6 +30,15 @@ public class InvestorProfileService {
 
         // Update fields
         profile.setInvestmentBudget(request.investmentBudget());
+        profile.setInvestmentBudget(request.investmentBudget());
+
+        // Bio Validation
+        if (request.bio() != null) {
+            int maxBioLength = appConfigService.getIntValue("max_bio_length", 250);
+            if (request.bio().length() > maxBioLength) {
+                throw new IllegalArgumentException("Bio must not exceed " + maxBioLength + " characters");
+            }
+        }
         profile.setBio(request.bio());
         profile.setPreferredIndustries(request.preferredIndustries());
         profile.setLinkedInUrl(request.linkedInUrl());

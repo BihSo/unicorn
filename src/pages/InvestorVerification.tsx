@@ -18,7 +18,9 @@ import {
     fetchVerificationQueue,
     approveInvestorForPayment,
     rejectInvestorVerification,
-    InvestorVerification
+    fetchInvestorStats,
+    InvestorVerification,
+    InvestorStats
 } from '../lib/api'
 import { formatDate, formatCurrency } from '../lib/utils'
 import { toast } from 'sonner'
@@ -34,6 +36,7 @@ import { Textarea } from '../components/ui/textarea'
 
 export function InvestorVerificationPage() {
     const [queue, setQueue] = useState<InvestorVerification[]>([])
+    const [stats, setStats] = useState<InvestorStats | null>(null)
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
     const [processingId, setProcessingId] = useState<string | null>(null)
@@ -44,18 +47,22 @@ export function InvestorVerificationPage() {
     const [rejectReason, setRejectReason] = useState('')
 
     useEffect(() => {
-        loadQueue()
+        loadData()
     }, [])
 
-    async function loadQueue() {
+    async function loadData() {
         try {
             setLoading(true)
             setError(null)
-            const data = await fetchVerificationQueue()
-            setQueue(data)
+            const [queueData, statsData] = await Promise.all([
+                fetchVerificationQueue(),
+                fetchInvestorStats()
+            ])
+            setQueue(queueData)
+            setStats(statsData)
         } catch (err) {
-            console.error('Failed to fetch verification queue:', err)
-            setError(err instanceof Error ? err.message : 'Failed to load verification queue')
+            console.error('Failed to fetch verification data:', err)
+            setError(err instanceof Error ? err.message : 'Failed to load verification data')
         } finally {
             setLoading(false)
         }
@@ -126,7 +133,7 @@ export function InvestorVerificationPage() {
                         Review and approve investor verification requests
                     </p>
                 </div>
-                <Button variant="outline" size="sm" onClick={loadQueue}>
+                <Button variant="outline" size="sm" onClick={loadData}>
                     <RefreshCcw className="h-4 w-4 mr-2" />
                     Refresh
                 </Button>
@@ -140,14 +147,43 @@ export function InvestorVerificationPage() {
             )}
 
             {/* Queue Stats */}
-            <div className="grid gap-4 md:grid-cols-3">
+            <div className="grid gap-4 md:grid-cols-4">
                 <Card>
                     <CardHeader className="pb-2">
-                        <CardTitle className="text-sm font-medium">Pending Requests</CardTitle>
+                        <CardTitle className="text-sm font-medium">Total Investors</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <div className="text-3xl font-bold">{queue.length}</div>
-                        <p className="text-xs text-muted-foreground">Awaiting review</p>
+                        <div className="text-2xl font-bold">{stats?.totalInvestors || 0}</div>
+                        <p className="text-xs text-muted-foreground">Registered on platform</p>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-sm font-medium">Verified Investors</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold text-emerald-600">{stats?.verifiedInvestors || 0}</div>
+                        <p className="text-xs text-muted-foreground">Fully verified</p>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-sm font-medium">Pending Review</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold text-yellow-500">{stats?.pendingVerifications || 0}</div>
+                        <p className="text-xs text-muted-foreground">Awaiting approval</p>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-sm font-medium">Total Capital</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold text-blue-600">
+                            {formatCurrency(stats?.totalInvestmentBudget || 0)}
+                        </div>
+                        <p className="text-xs text-muted-foreground">Combined budget</p>
                     </CardContent>
                 </Card>
             </div>
