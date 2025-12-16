@@ -222,10 +222,36 @@ public class AuthenticationService {
                                         .orElseThrow(() -> new IllegalArgumentException("User not found"));
                 }
 
-                // 2. Authenticate using the resolved Email (as UserDetailsService likely
-                // expects email)
-                authenticationManager.authenticate(
-                                new UsernamePasswordAuthenticationToken(user.getEmail(), request.password()));
+                try {
+                        // 2. Authenticate using the resolved Email (as UserDetailsService likely
+                        // expects email)
+                        authenticationManager.authenticate(
+                                        new UsernamePasswordAuthenticationToken(user.getEmail(), request.password()));
+                } catch (org.springframework.security.authentication.LockedException
+                                | org.springframework.security.authentication.DisabledException e) {
+                        // Check if user is actually suspended/banned/disabled and return rich response
+                        if ("SUSPENDED".equals(user.getStatus()) || "BANNED".equals(user.getStatus())) {
+                                LoginResponse.SuspensionBanInfo info = new LoginResponse.SuspensionBanInfo(
+                                                user.getStatus(),
+                                                user.getSuspendReason(),
+                                                user.getSuspendedAt(),
+                                                user.getSuspendedUntil(),
+                                                user.getSuspensionType(),
+                                                user.getSuspendedUntil() != null); // isTemporary
+
+                                LoginResponse response = new LoginResponse(
+                                                null,
+                                                null,
+                                                user.getUsername(),
+                                                user.getEmail(),
+                                                user.getRole(),
+                                                user.getId(),
+                                                info,
+                                                user.getCanAccessDashboard());
+                                throw new com.unicorn.backend.exception.UserSuspendedException(response);
+                        }
+                        throw e; // Rethrow if it's some other lock reason or we want default behavior for others
+                }
 
                 if (!user.isEnabled()) {
                         if ("PENDING_VERIFICATION".equals(user.getStatus())) {

@@ -64,6 +64,18 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 return;
             }
 
+            // Check if user is revoked/banned via Redis check (immediate effect)
+            String userId = jwtService.extractUserId(jwt);
+            java.util.Date issuedAt = jwtService.extractIssuedAt(jwt);
+
+            if (userId != null && issuedAt != null &&
+                    tokenBlacklistService.isUserRevoked(userId, issuedAt.getTime())) {
+                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                response.setContentType("application/json");
+                response.getWriter().write("{\"error\": \"Session revoked\"}");
+                return;
+            }
+
             userEmail = jwtService.extractEmail(jwt);
             if (userEmail != null && SecurityContextHolder.getContext().getAuthentication() == null) {
                 UserDetails userDetails = this.userDetailsService.loadUserByUsername(userEmail);

@@ -6,6 +6,7 @@ import com.unicorn.backend.security.RefreshTokenRepository;
 import com.unicorn.backend.subscription.Subscription;
 import com.unicorn.backend.subscription.SubscriptionRepository;
 import com.unicorn.backend.user.*;
+import com.unicorn.backend.jwt.TokenBlacklistService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,6 +28,7 @@ public class UserModerationService {
         private final RefreshTokenRepository refreshTokenRepository;
         private final SubscriptionRepository subscriptionRepository;
         private final PaymentRepository paymentRepository;
+        private final TokenBlacklistService tokenBlacklistService;
 
         /**
          * Get detailed user information for admin view.
@@ -79,13 +81,6 @@ public class UserModerationService {
                 }
 
                 user.getInvestorProfile().setReadyForPayment(true);
-                // Note: user.getInvestorProfile() is a managed entity via User if mapped
-                // correctly
-                // or we need to save explicitly if CascadeType is not ALL/MERGE.
-                // Assuming OneToOne with Cascade from data source inspection or manually
-                // saving.
-                // Safest to save user or just the profile if we inject repo.
-                // Let's inject InvestorProfileRepository
         }
 
         /**
@@ -120,6 +115,10 @@ public class UserModerationService {
                 }
 
                 userRepository.save(user);
+
+                // Revoke all access
+                refreshTokenRepository.deleteByUserId(userId);
+                tokenBlacklistService.revokeUserAccess(userId.toString());
 
                 // Create moderation log
                 UserModerationLog log = UserModerationLog.builder()
@@ -264,6 +263,10 @@ public class UserModerationService {
                 user.setDeletionReason(reason);
                 userRepository.save(user);
 
+                // Revoke all access
+                refreshTokenRepository.deleteByUserId(userId);
+                tokenBlacklistService.revokeUserAccess(userId.toString());
+
                 // Create deletion log
                 UserModerationLog log = UserModerationLog.builder()
                                 .user(user)
@@ -297,6 +300,7 @@ public class UserModerationService {
 
                 // Delete refresh tokens first (foreign key constraint)
                 refreshTokenRepository.deleteByUserId(userId);
+                tokenBlacklistService.revokeUserAccess(userId.toString());
 
                 // Delete all moderation logs for this user
                 moderationLogRepository.deleteAll(

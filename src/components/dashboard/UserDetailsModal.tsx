@@ -271,7 +271,7 @@ export function UserDetailsModal({ userId, open, onOpenChange, onAction }: UserD
                         <div className="flex border-b mb-4">
                             {tabs.filter(tab => {
                                 // Filter out tabs based on role
-                                if (userDetails.role === 'ADMIN') {
+                                if (userDetails.role === 'ADMIN' || userDetails.role === 'SUPER_ADMIN') {
                                     return ['info', 'history', 'security'].includes(tab.id)
                                 }
                                 return true
@@ -324,7 +324,7 @@ export function UserDetailsModal({ userId, open, onOpenChange, onAction }: UserD
                                         <InfoRow icon={Mail} label="Email" value={userDetails.email} />
                                         <InfoRow icon={User} label="First Name" value={userDetails.firstName || '-'} />
                                         <InfoRow icon={User} label="Last Name" value={userDetails.lastName || '-'} />
-                                        {userDetails.role !== 'ADMIN' && (
+                                        {(userDetails.role !== 'ADMIN' && userDetails.role !== 'SUPER_ADMIN') && (
                                             <>
                                                 <InfoRow icon={Phone} label="Phone" value={userDetails.phoneNumber || 'Not provided'} />
                                                 <InfoRow icon={MapPin} label="Country" value={userDetails.country || 'Not specified'} />
@@ -333,8 +333,8 @@ export function UserDetailsModal({ userId, open, onOpenChange, onAction }: UserD
                                         )}
                                     </div>
 
-                                    {/* Additional Info (Bio & LinkedIn) moved here for universal visibility - HIDDEN FOR ADMIN */}
-                                    {userDetails.role !== 'ADMIN' && (
+                                    {/* Additional Info (Bio & LinkedIn) moved here for universal visibility - HIDDEN FOR ADMIN/SUPER_ADMIN */}
+                                    {(userDetails.role !== 'ADMIN' && userDetails.role !== 'SUPER_ADMIN') && (
                                         <div className="grid grid-cols-1 gap-4 mt-4">
                                             <div className="flex items-center gap-3">
                                                 <Globe className="h-4 w-4 text-muted-foreground" />
@@ -465,7 +465,7 @@ export function UserDetailsModal({ userId, open, onOpenChange, onAction }: UserD
 
                                     {/* Stats */}
                                     <div className="grid grid-cols-3 gap-4">
-                                        {userDetails.role !== 'ADMIN' && (
+                                        {(userDetails.role !== 'ADMIN' && userDetails.role !== 'SUPER_ADMIN') && (
                                             <StatCard
                                                 icon={Building2}
                                                 label={userDetails.role === 'INVESTOR' ? 'Deals (Mock)' : 'Startups'}
@@ -473,7 +473,7 @@ export function UserDetailsModal({ userId, open, onOpenChange, onAction }: UserD
                                                 color="purple"
                                             />
                                         )}
-                                        {userDetails.role === 'ADMIN' ? (
+                                        {(userDetails.role === 'ADMIN' || userDetails.role === 'SUPER_ADMIN') ? (
                                             // Admin specific stats (focus on History/Security)
                                             <>
                                                 <StatCard

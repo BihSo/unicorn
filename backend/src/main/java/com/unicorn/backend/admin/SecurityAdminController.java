@@ -1,5 +1,6 @@
 package com.unicorn.backend.admin;
 
+import com.unicorn.backend.jwt.TokenBlacklistService;
 import com.unicorn.backend.security.RefreshToken;
 import com.unicorn.backend.security.RefreshTokenRepository;
 import com.unicorn.backend.user.User;
@@ -22,6 +23,7 @@ public class SecurityAdminController {
 
     private final RefreshTokenRepository refreshTokenRepository;
     private final UserRepository userRepository;
+    private final TokenBlacklistService tokenBlacklistService;
 
     /**
      * Get active sessions (refresh tokens) for a user.
@@ -57,7 +59,13 @@ public class SecurityAdminController {
         if (!userRepository.existsById(userId)) {
             throw new RuntimeException("User not found");
         }
+
+        // Delete all refresh tokens
         refreshTokenRepository.deleteByUserId(userId);
+
+        // Revoke access tokens immediately via Redis
+        tokenBlacklistService.revokeUserAccess(userId.toString());
+
         return ResponseEntity.ok().build();
     }
 

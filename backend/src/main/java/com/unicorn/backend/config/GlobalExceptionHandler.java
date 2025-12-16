@@ -29,6 +29,12 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
     }
 
+    @ExceptionHandler(com.unicorn.backend.exception.UserSuspendedException.class)
+    public ResponseEntity<com.unicorn.backend.auth.LoginResponse> handleUserSuspendedException(
+            com.unicorn.backend.exception.UserSuspendedException e) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(e.getLoginResponse());
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, String>> handleGenericException(Exception e) {
         // Log the error to console so we can debug it
