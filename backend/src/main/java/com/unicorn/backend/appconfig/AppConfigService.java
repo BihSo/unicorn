@@ -69,6 +69,28 @@ public class AppConfigService {
         return configRepository.findAllByOrderByCategoryAscKeyAsc();
     }
 
+    public List<AppConfig> getByCategory(String category) {
+        return configRepository.findByCategory(category);
+    }
+
+    private volatile boolean cachedMaintenanceMode = false;
+
+    @jakarta.annotation.PostConstruct
+    public void init() {
+        // Initialize cache
+        cachedMaintenanceMode = Boolean.parseBoolean(getValue("maintenance_mode", "false"));
+    }
+
+    public boolean isMaintenanceModeEnabled() {
+        return cachedMaintenanceMode;
+    }
+
+    private void updateCachedMaintenanceMode(String key, String value) {
+        if ("maintenance_mode".equals(key)) {
+            cachedMaintenanceMode = Boolean.parseBoolean(value);
+        }
+    }
+
     /**
      * Update a config value.
      */
@@ -77,6 +99,8 @@ public class AppConfigService {
         AppConfig config = configRepository.findById(key)
                 .orElseThrow(() -> new RuntimeException("Config not found: " + key));
         config.setValue(value);
+
+        updateCachedMaintenanceMode(key, value);
 
         // Auto-increment version when any config is updated
         incrementVersion();
@@ -99,6 +123,8 @@ public class AppConfigService {
             config.setCategory(category);
         if (valueType != null)
             config.setValueType(valueType);
+
+        updateCachedMaintenanceMode(key, value);
 
         return configRepository.save(config);
     }
@@ -136,16 +162,33 @@ public class AppConfigService {
         upsertIfNotExists("pricing_pro", "299", "Pro plan monthly price", "pricing", "NUMBER");
         upsertIfNotExists("pricing_elite", "799", "Elite plan monthly price", "pricing", "NUMBER");
 
-        // Limits
-        upsertIfNotExists("max_post_length", "2000", "Maximum post content length", "limits", "NUMBER");
-        upsertIfNotExists("max_comment_length", "1000", "Maximum comment length", "limits", "NUMBER");
-        upsertIfNotExists("max_bio_length", "250", "Maximum user bio length", "limits", "NUMBER");
-        upsertIfNotExists("nudge_limit_free", "4", "Weekly nudge limit for free users", "limits", "NUMBER");
-        upsertIfNotExists("nudge_limit_pro", "12", "Flexible nudge limit for pro users", "limits", "NUMBER");
+        // Limits - General
+        upsert("max_post_length", "2000", "Maximum post content length", "limits_general", "NUMBER");
+        upsert("max_comment_length", "1000", "Maximum comment length", "limits_general", "NUMBER");
+        upsert("max_bio_length", "250", "Maximum user bio length", "limits_general", "NUMBER");
+
+        // Limits - Plans
+        upsert("nudge_limit_free", "4", "Weekly nudge limit for free users", "limits_plans", "NUMBER");
+        upsert("nudge_limit_pro", "12", "Flexible nudge limit for pro users", "limits_plans", "NUMBER");
 
         // System
         upsertIfNotExists("maintenance_mode", "false", "Enable maintenance mode", "system", "BOOLEAN");
         upsertIfNotExists("config_version", "1", "Configuration version for mobile app sync", "system", "NUMBER");
+
+        // Exchange Rates (Base USD)
+        upsertIfNotExists("rate_sar", "3.75", "Saudi Riyal Exchange Rate", "exchange_rates", "NUMBER");
+        upsertIfNotExists("rate_aed", "3.67", "UAE Dirham Exchange Rate", "exchange_rates", "NUMBER");
+        upsertIfNotExists("rate_egp", "50.50", "Egyptian Pound Exchange Rate", "exchange_rates", "NUMBER");
+        upsertIfNotExists("rate_qar", "3.64", "Qatari Riyal Exchange Rate", "exchange_rates", "NUMBER");
+        upsertIfNotExists("rate_kwd", "0.31", "Kuwaiti Dinar Exchange Rate", "exchange_rates", "NUMBER");
+        upsertIfNotExists("rate_bhd", "0.38", "Bahraini Dinar Exchange Rate", "exchange_rates", "NUMBER");
+        upsertIfNotExists("rate_omr", "0.38", "Omani Rial Exchange Rate", "exchange_rates", "NUMBER");
+        upsertIfNotExists("rate_jod", "0.71", "Jordanian Dinar Exchange Rate", "exchange_rates", "NUMBER");
+        upsertIfNotExists("rate_lbp", "89500", "Lebanese Pound Exchange Rate", "exchange_rates", "NUMBER");
+        upsertIfNotExists("rate_mad", "10.0", "Moroccan Dirham Exchange Rate", "exchange_rates", "NUMBER");
+
+        // Ensure cache is synced after defaults
+        init();
     }
 
     private void upsertIfNotExists(String key, String value, String description, String category, String valueType) {

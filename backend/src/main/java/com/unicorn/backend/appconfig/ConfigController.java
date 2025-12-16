@@ -56,7 +56,7 @@ public class ConfigController {
 
     /**
      * Update a single config value.
-     * 
+     *
      * PUT /api/v1/admin/config/{key}
      */
     @PutMapping("/api/v1/admin/config/{key}")
@@ -117,5 +117,42 @@ public class ConfigController {
     @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
     public ResponseEntity<Map<String, Integer>> getConfigVersion() {
         return ResponseEntity.ok(Map.of("version", configService.getVersion()));
+    }
+
+    /**
+     * Sync exchange rates from external API.
+     * POST /api/v1/admin/config/sync-rates
+     */
+    @PostMapping("/api/v1/admin/config/sync-rates")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
+    public ResponseEntity<Map<String, String>> syncExchangeRates() {
+        try {
+            org.springframework.web.client.RestTemplate restTemplate = new org.springframework.web.client.RestTemplate();
+            String url = "https://open.er-api.com/v6/latest/USD";
+            Map<String, Object> response = restTemplate.getForObject(url, Map.class);
+
+            if (response == null || !response.containsKey("rates")) {
+                return ResponseEntity.status(502).body(Map.of("error", "Failed to fetch rates from external API"));
+            }
+
+            Map<String, Number> rates = (Map<String, Number>) response.get("rates");
+            List<String> currencies = List.of("SAR", "AED", "EGP", "QAR", "KWD", "BHD", "OMR", "JOD", "LBP", "MAD");
+            Map<String, String> updated = new HashMap<>();
+
+            for (String curr : currencies) {
+                if (rates.containsKey(curr)) {
+                    String val = String.valueOf(rates.get(curr));
+                    configService.updateValue("rate_" + curr.toLowerCase(), val);
+                    updated.put(curr, val);
+                }
+            }
+            // Manually fixed logic for LBP if the API returns 89500 instead of old official
+            // 15000, we take what API gives.
+
+            return ResponseEntity.ok(updated);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.internalServerError().body(Map.of("error", e.getMessage()));
+        }
     }
 }

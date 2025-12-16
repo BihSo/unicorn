@@ -47,6 +47,7 @@ public class UserResponseService {
                 user.getSuspendReason(),
                 user.getInvestorProfile() != null,
                 user.getStartups() != null && !user.getStartups().isEmpty(),
-                hasActiveSession);
+                hasActiveSession,
+                user.getPreferredCurrency());
     }
 }

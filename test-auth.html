@@ -99,6 +99,8 @@
             border-radius: 8px;
             font-size: 14px;
             display: none;
+            max-height: 300px;
+            overflow-y: auto;
         }
 
         .response.success {
@@ -122,6 +124,8 @@
             font-size: 12px;
             direction: ltr;
             text-align: left;
+            max-height: 200px;
+            overflow-y: auto;
         }
 
         .info {
@@ -291,10 +295,61 @@
 
             <div id="loginResponse" class="response"></div>
         </div>
+        <!-- Startup Card -->
+        <div class="card" id="startupCard" style="display: none; border-top: 5px solid #667eea;">
+            <h2>🚀 إدارة المشروع (Startup Management)</h2>
+            <div class="info">
+                <strong>أهلاً، صاحب المشروع!</strong> يمكنك هنا إضافة مشروع جديد للاختبار.
+            </div>
+
+            <form id="startupForm">
+                <div class="form-group">
+                    <label for="startupName">اسم المشروع (Startup Name) *</label>
+                    <input type="text" id="startupName" placeholder="My Unicorn App" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="startupStage">المرحلة (Stage) *</label>
+                    <select id="startupStage" required>
+                        <option value="IDEA">فكرة (Idea)</option>
+                        <option value="MVP">نموذج أولي (MVP)</option>
+                        <option value="GROWTH">نمو (Growth)</option>
+                        <option value="SCALING">توسع (Scaling)</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="startupIndustry">الصناعة (Industry)</label>
+                    <input type="text" id="startupIndustry" placeholder="Fintech, AI, Health...">
+                </div>
+
+                <div class="form-group">
+                    <label for="startupGoal">هدف التمويل (Funding Goal)</label>
+                    <input type="number" id="startupGoal" placeholder="100000">
+                </div>
+
+                <div class="form-group">
+                    <label for="startupTagline">شعار مختصر (Tagline)</label>
+                    <input type="text" id="startupTagline" placeholder="The next big thing">
+                </div>
+
+                <div class="form-group">
+                    <label for="startupDesc">وصف كامل (Full Description)</label>
+                    <textarea id="startupDesc" rows="3"
+                        style="width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 14px;"></textarea>
+                </div>
+
+                <button type="submit" style="background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);">➕ إنشاء
+                    المشروع</button>
+            </form>
+            <div id="startupResponse" class="response"></div>
+        </div>
     </div>
 
     <script>
         const API_URL = 'http://localhost:9090/api/v1/auth';
+        const STARTUP_API_URL = 'http://localhost:9090/api/v1/startups';
+        let currentAccessToken = '';
 
         // Toggle Investor Fields
         document.getElementById('regRole').addEventListener('change', (e) => {
@@ -412,6 +467,7 @@
                     `;
                     // Fill login
                     document.getElementById('loginEmail').value = email;
+                    currentAccessToken = data.accessToken;
                 } else {
                     throw new Error(data.error || 'Verification failed');
                 }
@@ -432,6 +488,7 @@
             const email = document.getElementById('loginEmail').value;
             const password = document.getElementById('loginPassword').value;
             const responseDiv = document.getElementById('loginResponse');
+            const startupCard = document.getElementById('startupCard');
 
             try {
                 const response = await fetch(`${API_URL}/login`, {
@@ -445,15 +502,28 @@
                 const data = await response.json();
 
                 if (response.ok) {
+                    currentAccessToken = data.accessToken;
                     responseDiv.className = 'response success';
                     responseDiv.style.display = 'block';
                     responseDiv.innerHTML = `
                         <strong>✅ تم تسجيل الدخول بنجاح!</strong>
                         <pre>${JSON.stringify(data, null, 2)}</pre>
                         <p style="margin-top: 10px;"><strong>Access Token:</strong> ${data.accessToken}</p>
-                        <p><strong>Can Access Dashboard:</strong> ${data.canAccessDashboard ? 'نعم ✅' : 'لا ❌'}</p>
+                        <p><strong>Role:</strong> ${data.role}</p>
                     `;
                     document.getElementById('loginForm').reset();
+
+                    // Check Role and Show Startup Card
+                    if (data.role === 'STARTUP_OWNER') {
+                        startupCard.style.display = 'block';
+                        startupCard.scrollIntoView({ behavior: 'smooth' });
+                    } else {
+                        startupCard.style.display = 'none';
+                        if (data.role === 'INVESTOR') {
+                            alert('⚠️ مرحباً أيها المستثمر! ولكن هذه اللوحة لأصحاب المشاريع فقط.');
+                        }
+                    }
+
                 } else {
                     throw new Error(data.error || 'Login failed');
                 }
@@ -462,6 +532,63 @@
                 responseDiv.style.display = 'block';
                 responseDiv.innerHTML = `
                     <strong>❌ فشل تسجيل الدخول</strong>
+                    <p>${error.message}</p>
+                `;
+            }
+        });
+
+        // Startup Form Handler
+        document.getElementById('startupForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            if (!currentAccessToken) {
+                alert('يجب تسجيل الدخول أولاً!');
+                return;
+            }
+
+            const name = document.getElementById('startupName').value;
+            const stage = document.getElementById('startupStage').value;
+            const industry = document.getElementById('startupIndustry').value;
+            const fundingGoal = document.getElementById('startupGoal').value;
+            const tagline = document.getElementById('startupTagline').value;
+            const fullDescription = document.getElementById('startupDesc').value;
+
+            const responseDiv = document.getElementById('startupResponse');
+
+            try {
+                const response = await fetch(STARTUP_API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${currentAccessToken}`
+                    },
+                    body: JSON.stringify({
+                        name,
+                        stage,
+                        industry,
+                        fundingGoal,
+                        tagline,
+                        fullDescription
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    responseDiv.className = 'response success';
+                    responseDiv.style.display = 'block';
+                    responseDiv.innerHTML = `
+                        <strong>✅ تم إنشاء المشروع بنجاح!</strong>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    `;
+                } else {
+                    throw new Error(data.error || JSON.stringify(data) || 'Startup creation failed');
+                }
+            } catch (error) {
+                responseDiv.className = 'response error';
+                responseDiv.style.display = 'block';
+                responseDiv.innerHTML = `
+                    <strong>❌ فشل إنشاء المشروع</strong>
                     <p>${error.message}</p>
                 `;
             }

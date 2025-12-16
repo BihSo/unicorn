@@ -100,6 +100,9 @@ public class User implements UserDetails {
     @UpdateTimestamp
     private LocalDateTime updatedAt;
 
+    @Column(name = "preferred_currency", length = 3)
+    private String preferredCurrency = "USD";
+
     // Relationships
     @OneToMany(mappedBy = "owner", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<Startup> startups;

@@ -9,6 +9,7 @@ public record LoginResponse(
         String email,
         String role,
         UUID userId,
+        String preferredCurrency,
         SuspensionBanInfo suspensionBanInfo,
         Boolean canAccessDashboard) {
     public record SuspensionBanInfo(

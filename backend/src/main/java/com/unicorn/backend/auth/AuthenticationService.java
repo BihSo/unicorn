@@ -206,6 +206,7 @@ public class AuthenticationService {
                 // Return Empty Response or Partial (No Tokens)
                 return new LoginResponse(null, null, savedUser.getUsername(), savedUser.getEmail(), savedUser.getRole(),
                                 savedUser.getId(),
+                                savedUser.getPreferredCurrency(),
                                 null, false);
         }
 
@@ -246,6 +247,7 @@ public class AuthenticationService {
                                                 user.getEmail(),
                                                 user.getRole(),
                                                 user.getId(),
+                                                user.getPreferredCurrency(),
                                                 info,
                                                 user.getCanAccessDashboard());
                                 throw new com.unicorn.backend.exception.UserSuspendedException(response);
@@ -278,6 +280,7 @@ public class AuthenticationService {
                                 user.getEmail(),
                                 user.getRole(),
                                 user.getId(),
+                                user.getPreferredCurrency(),
                                 null,
                                 user.getCanAccessDashboard());
         }
@@ -295,6 +298,7 @@ public class AuthenticationService {
                                                         user.getEmail(),
                                                         user.getRole(),
                                                         user.getId(),
+                                                        user.getPreferredCurrency(),
                                                         null,
                                                         user.getCanAccessDashboard());
                                 })
@@ -338,6 +342,7 @@ public class AuthenticationService {
                                 user.getEmail(),
                                 user.getRole(),
                                 user.getId(),
+                                user.getPreferredCurrency(),
                                 null,
                                 user.getCanAccessDashboard());
         }

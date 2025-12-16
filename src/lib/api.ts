@@ -45,7 +45,23 @@ async function handleResponse<T>(response: Response): Promise<T> {
         }
         throw new Error(errorMessage);
     }
-    return response.json();
+
+    // Check for empty body (204 No Content or content-length 0)
+    if (response.status === 204) {
+        return undefined as unknown as T;
+    }
+
+    const text = await response.text();
+    if (!text) {
+        return undefined as unknown as T;
+    }
+
+    try {
+        return JSON.parse(text);
+    } catch {
+        // Fallback if not JSON (though usually it should be)
+        return text as unknown as T;
+    }
 }
 
 // ==================== Dashboard Stats API ====================
@@ -294,4 +310,21 @@ export async function searchUsers(query: string): Promise<{ content: User[] }> {
         headers: createHeaders(),
     });
     return handleResponse(response);
+}
+
+export async function updatePreferredCurrency(currency: string): Promise<void> {
+    const response = await fetch(`${API_BASE_URL}/users/me/preferred-currency`, {
+        method: 'PUT',
+        headers: createHeaders(),
+        body: JSON.stringify({ currency }),
+    });
+    return handleResponse<void>(response);
+}
+
+export async function syncExchangeRates(): Promise<Record<string, string>> {
+    const response = await fetch(`${API_BASE_URL}/admin/config/sync-rates`, {
+        method: 'POST',
+        headers: createHeaders(),
+    });
+    return handleResponse<Record<string, string>>(response);
 }
