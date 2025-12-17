@@ -157,12 +157,37 @@ export function CreateStartupDialog({
         }
         try {
             setIsLoading(true)
+            // If the selected date is today, use the current time
+            // Otherwise default to start of day (or end of day for leftAt?)
+            // Actually, backend now expects LocalDateTime.
+            // Let's assume if user picks today, they mean "now".
+            // If they pick a past date, we can default to noon or something, or just use the date string + T00:00:00.
+            // But to fix the "static 2:00 AM" issue, specifically for "today", we should send current time.
+
+            const today = new Date().toISOString().split('T')[0]
+
+            let joinedAtISO = memberJoinedAt
+            if (memberJoinedAt === today) {
+                joinedAtISO = new Date().toISOString()
+            } else {
+                joinedAtISO = new Date(memberJoinedAt).toISOString()
+            }
+
+            let leftAtISO: string | null = null
+            if (!memberIsActive && memberLeftAt) {
+                if (memberLeftAt === today) {
+                    leftAtISO = new Date().toISOString()
+                } else {
+                    leftAtISO = new Date(memberLeftAt).toISOString()
+                }
+            }
+
             await addStartupMember(
                 memberStartup.id,
                 memberUser.id,
                 memberRole,
-                memberJoinedAt,
-                memberIsActive ? null : memberLeftAt
+                joinedAtISO,
+                leftAtISO
             )
             toast.success("Member added successfully")
             onSuccess()

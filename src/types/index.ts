@@ -16,6 +16,7 @@ export interface StartupMember {
     id: string;
     userId: string;
     userName: string;
+    userEmail: string;
     userAvatarUrl: string;
     role: string;
     joinedAt: string;

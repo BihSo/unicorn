@@ -60,8 +60,13 @@ public class StartupService {
                 .twitterUrl(request.twitterUrl())
                 .ownerRole(request.ownerRole())
                 // Status defaults to APPROVED via @Builder.Default
-                .owner(owner) // Temporarily use 'user', will fix owner lookup in next step
+                .owner(owner)
                 .build();
+
+        // Ensure owner is added as a member
+        String initialRole = request.ownerRole() != null ? request.ownerRole().name() : "FOUNDER";
+        StartupMember ownerMember = new StartupMember(startup, owner, initialRole, java.time.LocalDateTime.now());
+        startup.getMembers().add(ownerMember);
 
         Startup savedStartup = startupRepository.save(startup);
         return StartupResponse.fromEntity(savedStartup);
@@ -189,7 +194,7 @@ public class StartupService {
     }
 
     /**
-     * Transfer startup ownership to a new user (Admin only).
+     * Transfer startup ownership to a new user.
      *
      * @param id       the startup ID
      * @param newOwner the new owner user
@@ -201,9 +206,42 @@ public class StartupService {
         Startup startup = startupRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Startup not found: " + id));
 
+        User oldOwner = startup.getOwner();
+
+        // Ensure old owner remains as a member
+        boolean isOldOwnerMember = startup.getMembers().stream()
+                .anyMatch(m -> m.getUser().getId().equals(oldOwner.getId()));
+
+        if (!isOldOwnerMember) {
+            String oldRole = startup.getOwnerRole() != null ? startup.getOwnerRole().name() : "FOUNDER";
+            java.time.LocalDateTime joinedAt = startup.getCreatedAt() != null ? startup.getCreatedAt()
+                    : java.time.LocalDateTime.now();
+            StartupMember oldMember = new StartupMember(startup, oldOwner, oldRole, joinedAt);
+            startup.getMembers().add(oldMember);
+        }
+
         // TODO: Create audit log entry when audit service is implemented
         // auditLogService.log("OWNERSHIP_TRANSFER", startup.getId(),
         // startup.getOwner().getId(), newOwner.getId());
+
+        // Update owner role based on new owner's existing member role
+        startup.getMembers().stream()
+                .filter(m -> m.getUser().getId().equals(newOwner.getId()) && m.isActive())
+                .findFirst()
+                .ifPresent(member -> {
+                    try {
+                        StartupRole role = StartupRole.valueOf(member.getRole());
+                        startup.setOwnerRole(role);
+                    } catch (IllegalArgumentException e) {
+                        // If role string doesn't match enum (e.g. custom role), default or keep as is?
+                        // For now, let's default to OTHER if invalid, or keep previous.
+                        // Actually, better to log and maybe default to FOUNDER if completely unknown?
+                        // User request implies they want the "correct" role displayed.
+                        // If we can't map it, let's try to leave it or set to OTHER.
+                        // Safe bet: if valid enum, set it. Logic here assumes UI sends valid enum
+                        // strings.
+                    }
+                });
 
         startup.setOwner(newOwner);
         Startup updatedStartup = startupRepository.save(startup);

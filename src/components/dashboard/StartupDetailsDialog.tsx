@@ -9,12 +9,12 @@ import { Button } from "../ui/button"
 import {
     Facebook, Instagram, Twitter, Globe, UserCog,
     FileText, FileSpreadsheet, FilePieChart,
-    Building2, Calendar, User, Layers, Clock, TrendingUp, Target, Users
+    Building2, Calendar, Layers, Clock, TrendingUp, Target, Users
 } from "lucide-react"
-import { formatDate } from "../../lib/utils"
+import { formatDate, cn } from "../../lib/utils"
 import { Startup } from "../../types"
 import { useAuth } from "../../contexts/AuthContext"
-import { LogOut, Trash2, MoreVertical, BadgeCheck } from "lucide-react"
+import { LogOut, Trash2, MoreVertical } from "lucide-react"
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -23,7 +23,7 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "../ui/dropdown-menu"
-import { removeStartupMember, unsignStartupMember, leaveStartup, unsignStartup } from "../../lib/api"
+import { removeStartupMember, unsignStartupMember, leaveStartup, unsignStartup, transferStartupOwnership } from "../../lib/api"
 import { toast } from "sonner"
 import { useState, MouseEvent } from "react"
 import {
@@ -151,6 +151,27 @@ export function StartupDetailsDialog({
                     onActionComplete?.()
                 } catch (error) {
                     toast.error("Failed to delete member")
+                    console.error(error)
+                }
+            }
+        })
+    }
+
+    const handleTransferOwnership = (memberUserId: string, memberName: string) => {
+        if (!startup) return
+        setConfirmDialog({
+            open: true,
+            title: "Transfer Ownership",
+            description: `Are you sure you want to transfer ownership of ${startup.name} to ${memberName}? You will lose your status as the owner. This action cannot be undone by you.`,
+            variant: "destructive",
+            action: async () => {
+                try {
+                    await transferStartupOwnership(startup.id, memberUserId)
+                    toast.success(`Ownership transferred to ${memberName} successfully.`)
+                    onActionComplete?.()
+                    onOpenChange(false)
+                } catch (error) {
+                    toast.error("Failed to transfer ownership")
                     console.error(error)
                 }
             }
@@ -358,24 +379,7 @@ export function StartupDetailsDialog({
                                 </div>
                             </div>
 
-                            <div className="p-3 rounded-xl border bg-card text-card-foreground shadow-sm flex items-start gap-3">
-                                <div className="p-2 bg-purple-500/10 rounded-lg text-purple-600 mt-0.5">
-                                    <User className="h-4 w-4" />
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                    <p className="text-xs font-medium text-muted-foreground">Owner</p>
-                                    <p className="font-semibold mt-0.5 truncate text-sm" title={startup.ownerEmail}>
-                                        {startup.ownerEmail}
-                                    </p>
-                                    {startup.ownerRole && (
-                                        <div className="mt-1.5">
-                                            <span className="inline-flex items-center rounded-md bg-purple-50 px-2 py-0.5 text-xs font-medium text-purple-700 ring-1 ring-inset ring-purple-700/10">
-                                                {startup.ownerRole.replace(/_/g, " ")}
-                                            </span>
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
+
 
                             <div className="p-3 rounded-xl border bg-card text-card-foreground shadow-sm flex items-start gap-3">
                                 <div className="p-2 bg-orange-500/10 rounded-lg text-orange-600 mt-0.5">
@@ -406,80 +410,126 @@ export function StartupDetailsDialog({
                                     Team Members
                                 </h4>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    {startup.members.map((member) => (
-                                        <div key={member.id} className="group relative flex items-start gap-3 p-4 rounded-xl border bg-card text-card-foreground shadow-sm hover:shadow-md transition-shadow">
-                                            {/* Avatar */}
-                                            {member.userAvatarUrl ? (
-                                                <img src={member.userAvatarUrl} alt={member.userName} className="h-12 w-12 rounded-full object-cover border" />
-                                            ) : (
-                                                <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center border border-primary/20">
-                                                    <span className="font-bold text-primary text-sm">
-                                                        {member.userName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
-                                                    </span>
-                                                </div>
-                                            )}
-
-                                            {/* Info */}
-                                            <div className="flex-1 min-w-0">
-                                                <div className="flex items-center justify-between">
-                                                    <p className="font-semibold text-sm truncate">{member.userName}</p>
-                                                    {member.userId === startup.ownerId && (
-                                                        <span title="Owner">
-                                                            <BadgeCheck className="h-3.5 w-3.5 text-blue-500 fill-blue-500/10" />
-                                                        </span>
+                                    {startup.members.map((member) => {
+                                        const isOwner = member.userId === startup.ownerId;
+                                        return (
+                                            <div key={member.id} className={cn(
+                                                "group relative flex items-start gap-4 p-4 rounded-xl border transition-all duration-300",
+                                                isOwner
+                                                    ? "border-amber-400/50 bg-gradient-to-br from-card to-card/50 shadow-sm hover:border-amber-500/60"
+                                                    : "border-border/50 bg-gradient-to-br from-card to-card/50 hover:to-accent/5 hover:border-accent/20"
+                                            )}>
+                                                {/* Avatar with Status Indicator */}
+                                                <div className="relative shrink-0">
+                                                    {member.userAvatarUrl ? (
+                                                        <img src={member.userAvatarUrl} alt={member.userName} className="h-12 w-12 rounded-full object-cover border ring-2 ring-background shadow-sm" />
+                                                    ) : (
+                                                        <div className="h-12 w-12 rounded-full bg-primary/5 flex items-center justify-center border border-primary/10 ring-2 ring-background shadow-sm">
+                                                            <span className="font-bold text-primary text-sm">
+                                                                {member.userName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
+                                                            </span>
+                                                        </div>
                                                     )}
+                                                    <div className={cn(
+                                                        "absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full border-[2px] border-card ring-1 ring-background",
+                                                        member.isActive ? "bg-emerald-500" : "bg-slate-400"
+                                                    )} title={member.isActive ? "Active Member" : "Past Member"} />
                                                 </div>
-                                                <p className="text-xs font-medium text-primary mt-0.5">{member.role.replace(/_/g, " ")}</p>
 
-                                                <div className="flex flex-wrap items-center gap-2 mt-2">
-                                                    <span className={`text-[10px] px-1.5 py-0.5 rounded-md font-medium ${member.isActive ? 'bg-green-500/10 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
-                                                        {member.isActive ? 'Active' : 'Past Member'}
-                                                    </span>
-                                                    <span className="text-[10px] text-muted-foreground">
-                                                        Joined {formatDate(member.joinedAt)}
-                                                    </span>
-                                                    {!member.isActive && member.leftAt && (
-                                                        <span className="text-[10px] text-muted-foreground">
-                                                            • Left {formatDate(member.leftAt)}
+                                                {/* Info */}
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="flex items-start justify-between">
+                                                        <div className="min-w-0 pr-2">
+                                                            <div className="flex items-center gap-2">
+                                                                <p className={cn(
+                                                                    "font-semibold truncate leading-none",
+                                                                    isOwner ? "text-amber-900" : "text-foreground"
+                                                                )}>
+                                                                    {member.userName}
+                                                                </p>
+                                                                {isOwner && (
+                                                                    <span className="inline-flex items-center rounded-md bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold text-amber-700 ring-1 ring-inset ring-amber-600/20 shadow-sm whitespace-nowrap">
+                                                                        Owner
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                            <p className="text-xs text-muted-foreground mt-1 truncate font-medium">
+                                                                {member.userEmail}
+                                                            </p>
+                                                        </div>
+
+                                                        {isAdminOrOwner && member.userId !== user?.id && (
+                                                            <DropdownMenu>
+                                                                <DropdownMenuTrigger asChild>
+                                                                    <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground -mt-1 -mr-2">
+                                                                        <MoreVertical className="h-4 w-4" />
+                                                                    </Button>
+                                                                </DropdownMenuTrigger>
+                                                                <DropdownMenuContent align="end" className="w-48">
+                                                                    <DropdownMenuLabel>Member Actions</DropdownMenuLabel>
+                                                                    <DropdownMenuSeparator />
+                                                                    {member.isActive && (
+                                                                        <>
+                                                                            <DropdownMenuItem
+                                                                                onClick={() => handleTransferOwnership(member.userId, member.userName)}
+                                                                                className="text-blue-600 focus:text-blue-700 focus:bg-blue-50"
+                                                                            >
+                                                                                <UserCog className="mr-2 h-3.5 w-3.5" />
+                                                                                Transfer Ownership
+                                                                            </DropdownMenuItem>
+                                                                            <DropdownMenuItem
+                                                                                onClick={() => handleRemoveMember(member.userId, member.userName)}
+                                                                                className="text-amber-600 focus:text-amber-700 focus:bg-amber-50"
+                                                                            >
+                                                                                <LogOut className="mr-2 h-3.5 w-3.5" />
+                                                                                Mark as Left
+                                                                            </DropdownMenuItem>
+                                                                        </>
+                                                                    )}
+                                                                    <DropdownMenuItem
+                                                                        onClick={() => handleUnsignMember(member.userId, member.userName)}
+                                                                        className="text-red-600 focus:text-red-700 focus:bg-red-50"
+                                                                    >
+                                                                        <Trash2 className="mr-2 h-3.5 w-3.5" />
+                                                                        Delete from History
+                                                                    </DropdownMenuItem>
+                                                                </DropdownMenuContent>
+                                                            </DropdownMenu>
+                                                        )}
+                                                    </div>
+
+                                                    <div className="mt-3 flex flex-wrap items-center gap-2">
+                                                        {(() => {
+                                                            const roleColors: Record<string, string> = {
+                                                                FOUNDER: "bg-white text-indigo-700 border-indigo-200 hover:bg-indigo-50",
+                                                                CO_FOUNDER: "bg-white text-indigo-600 border-indigo-200 hover:bg-indigo-50",
+                                                                CEO: "bg-white text-purple-700 border-purple-200 hover:bg-purple-50",
+                                                                CTO: "bg-white text-cyan-700 border-cyan-200 hover:bg-cyan-50",
+                                                                COO: "bg-white text-blue-700 border-blue-200 hover:bg-blue-50",
+                                                                CFO: "bg-white text-emerald-700 border-emerald-200 hover:bg-emerald-50",
+                                                                CMO: "bg-white text-pink-700 border-pink-200 hover:bg-pink-50",
+                                                                CHIEF_PRODUCT_OFFICER: "bg-white text-orange-700 border-orange-200 hover:bg-orange-50",
+                                                                DEVELOPER: "bg-white text-slate-700 border-slate-200 hover:bg-slate-50",
+                                                                DESIGNER: "bg-white text-rose-700 border-rose-200 hover:bg-rose-50",
+                                                                OTHER: "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"
+                                                            };
+                                                            const colorClass = roleColors[member.role] || "bg-white text-gray-600 border-gray-200";
+
+                                                            return (
+                                                                <span className={cn("inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold border shadow-sm transition-colors", colorClass)}>
+                                                                    {member.role.replace(/_/g, " ")}
+                                                                </span>
+                                                            )
+                                                        })()}
+
+                                                        <span className="text-[10px] text-muted-foreground pl-1 border-l border-border/50">
+                                                            Joined {new Date(member.joinedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                                                         </span>
-                                                    )}
+                                                    </div>
                                                 </div>
                                             </div>
-
-                                            {/* Actions Menu (Admin/Owner only) */}
-                                            {isAdminOrOwner && member.userId !== user?.id && (
-                                                <div className="">
-                                                    <DropdownMenu>
-                                                        <DropdownMenuTrigger asChild>
-                                                            <Button variant="ghost" size="icon" className="h-6 w-6 -mr-2 text-muted-foreground hover:text-foreground">
-                                                                <MoreVertical className="h-3.5 w-3.5" />
-                                                            </Button>
-                                                        </DropdownMenuTrigger>
-                                                        <DropdownMenuContent align="end">
-                                                            <DropdownMenuLabel>Member Actions</DropdownMenuLabel>
-                                                            <DropdownMenuSeparator />
-                                                            {member.isActive && (
-                                                                <DropdownMenuItem
-                                                                    onClick={() => handleRemoveMember(member.userId, member.userName)}
-                                                                    className="text-amber-600 focus:text-amber-700 focus:bg-amber-50"
-                                                                >
-                                                                    <LogOut className="mr-2 h-3.5 w-3.5" />
-                                                                    Mark as Left
-                                                                </DropdownMenuItem>
-                                                            )}
-                                                            <DropdownMenuItem
-                                                                onClick={() => handleUnsignMember(member.userId, member.userName)}
-                                                                className="text-destructive focus:text-destructive focus:bg-destructive/10"
-                                                            >
-                                                                <Trash2 className="mr-2 h-3.5 w-3.5" />
-                                                                Remove from Team
-                                                            </DropdownMenuItem>
-                                                        </DropdownMenuContent>
-                                                    </DropdownMenu>
-                                                </div>
-                                            )}
-                                        </div>
-                                    ))}
+                                        )
+                                    })}
                                 </div>
                             </div>
                         )}
