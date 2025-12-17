@@ -27,7 +27,13 @@ public class StartupResponse {
     private BigDecimal raisedAmount;
     private String websiteUrl;
     private String logoUrl;
+    private String coverUrl;
+    private String facebookUrl;
+    private String instagramUrl;
+    private String twitterUrl;
     private String pitchDeckUrl;
+    private String businessPlanUrl;
+    private String businessModelUrl;
     private String financialDocumentsUrl;
     private StartupStatus status;
     private UUID ownerId;
@@ -53,7 +59,13 @@ public class StartupResponse {
                 .raisedAmount(startup.getRaisedAmount())
                 .websiteUrl(startup.getWebsiteUrl())
                 .logoUrl(startup.getLogoUrl())
+                .coverUrl(startup.getCoverUrl())
+                .facebookUrl(startup.getFacebookUrl())
+                .instagramUrl(startup.getInstagramUrl())
+                .twitterUrl(startup.getTwitterUrl())
                 .pitchDeckUrl(startup.getPitchDeckUrl())
+                .businessPlanUrl(startup.getBusinessPlanUrl())
+                .businessModelUrl(startup.getBusinessModelUrl())
                 .financialDocumentsUrl(startup.getFinancialDocumentsUrl())
                 .status(startup.getStatus())
                 .ownerId(startup.getOwner().getId())

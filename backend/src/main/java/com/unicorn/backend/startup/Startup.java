@@ -58,7 +58,25 @@ public class Startup {
     private String logoUrl;
 
     @Column
+    private String coverUrl;
+
+    @Column
+    private String facebookUrl;
+
+    @Column
+    private String instagramUrl;
+
+    @Column
+    private String twitterUrl;
+
+    @Column
     private String pitchDeckUrl;
+
+    @Column
+    private String businessPlanUrl;
+
+    @Column
+    private String businessModelUrl;
 
     @Column
     private String financialDocumentsUrl;

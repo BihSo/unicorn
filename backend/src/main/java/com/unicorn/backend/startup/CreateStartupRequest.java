@@ -25,7 +25,19 @@ public record CreateStartupRequest(
 
         String logoUrl,
 
+        String coverUrl,
+
+        String facebookUrl,
+
+        String instagramUrl,
+
+        String twitterUrl,
+
         String pitchDeckUrl,
+
+        String businessPlanUrl,
+
+        String businessModelUrl,
 
         String financialDocumentsUrl) {
 }

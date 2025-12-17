@@ -4,7 +4,6 @@ import {
     RefreshCcw,
     AlertCircle,
     Building2,
-    MoreHorizontal,
     Globe,
     UserCog,
     Eye,
@@ -20,7 +19,12 @@ import {
     ChevronsLeft,
     ChevronsRight,
     ChevronLeft,
-    ChevronRight
+    ChevronRight,
+    Facebook,
+    Instagram,
+    Twitter,
+    FileSpreadsheet,
+    FilePieChart
 } from "lucide-react"
 import { toast } from "sonner"
 
@@ -58,14 +62,7 @@ import {
     CardHeader,
     CardTitle,
 } from "../components/ui/card"
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuLabel,
-    DropdownMenuSeparator,
-    DropdownMenuTrigger,
-} from "../components/ui/dropdown-menu"
+
 import { Checkbox } from "../components/ui/checkbox"
 import { Label } from "../components/ui/label"
 import { RadioGroup, RadioGroupItem } from "../components/ui/radio-group"
@@ -418,15 +415,15 @@ export function StartupRequests() {
             {/* Startups Table */}
             <Card>
                 <CardHeader>
-                    <div className="flex items-center justify-between">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                         <div>
                             <CardTitle>All Startups</CardTitle>
                             <CardDescription>
                                 {startups.length} startups found
                             </CardDescription>
                         </div>
-                        <div className="flex items-center gap-2">
-                            <div className="relative w-64">
+                        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
+                            <div className="relative w-full sm:w-64">
                                 <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                                 <Input
                                     placeholder="Search owner email..."
@@ -435,17 +432,19 @@ export function StartupRequests() {
                                     className="pl-8"
                                 />
                             </div>
-                            <Button variant="outline" size="sm" onClick={loadData}>
-                                <RefreshCcw className="h-4 w-4 mr-2" />
-                                Refresh
-                            </Button>
-                            <Button size="sm" onClick={() => toast.info('Create Startup feature coming soon')}>
+                            <div className="flex items-center gap-2">
+                                <Button variant="outline" size="sm" onClick={loadData} className="flex-1 sm:flex-none">
+                                    <RefreshCcw className="h-4 w-4 mr-2" />
+                                    Refresh
+                                </Button>
+                                <Button variant="outline" size="sm" onClick={() => setExportDialogOpen(true)} className="flex-1 sm:flex-none">
+                                    <Download className="h-4 w-4 mr-2" />
+                                    Export
+                                </Button>
+                            </div>
+                            <Button size="sm" onClick={() => toast.info('Create Startup feature coming soon')} className="w-full sm:w-auto">
                                 <UserPlus className="h-4 w-4 mr-2" />
                                 Create Startup
-                            </Button>
-                            <Button variant="outline" size="sm" onClick={() => setExportDialogOpen(true)}>
-                                <Download className="h-4 w-4 mr-2" />
-                                Export
                             </Button>
                         </div>
                     </div>
@@ -461,8 +460,7 @@ export function StartupRequests() {
                             <Table>
                                 <TableHeader>
                                     <TableRow>
-                                        <TableHead>Startup</TableHead>
-                                        <TableHead>Owner</TableHead>
+                                        <TableHead>Startup & Owner</TableHead>
                                         <TableHead>Industry</TableHead>
                                         <TableHead>Stage</TableHead>
                                         <TableHead>Funding Goal</TableHead>
@@ -489,16 +487,12 @@ export function StartupRequests() {
                                                     )}
                                                     <div>
                                                         <p className="font-semibold text-sm">{startup.name}</p>
-                                                        {startup.tagline && (
-                                                            <p className="text-xs text-muted-foreground truncate max-w-[200px]">
-                                                                {startup.tagline}
-                                                            </p>
-                                                        )}
+                                                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                                                            <UserCog className="h-3 w-3" />
+                                                            {startup.ownerEmail}
+                                                        </div>
                                                     </div>
                                                 </div>
-                                            </TableCell>
-                                            <TableCell className="text-muted-foreground text-sm">
-                                                {startup.ownerEmail}
                                             </TableCell>
                                             <TableCell>
                                                 <Badge variant="outline" className="font-normal">
@@ -521,40 +515,39 @@ export function StartupRequests() {
                                                 {formatDate(startup.createdAt)}
                                             </TableCell>
                                             <TableCell className="text-right">
-                                                <DropdownMenu>
-                                                    <DropdownMenuTrigger asChild>
-                                                        <Button variant="ghost" className="h-8 w-8 p-0">
-                                                            <span className="sr-only">Open menu</span>
-                                                            <MoreHorizontal className="h-4 w-4" />
+                                                <div className="flex items-center justify-end gap-1">
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-100 dark:hover:bg-blue-900/50"
+                                                        onClick={() => setViewDialog({ open: true, startup })}
+                                                        title="View Details"
+                                                    >
+                                                        <Eye className="h-4 w-4" />
+                                                    </Button>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="h-8 w-8 text-amber-600 hover:text-amber-700 hover:bg-amber-100 dark:hover:bg-amber-900/50"
+                                                        onClick={() => setTransferDialog({ open: true, startup })}
+                                                        title="Transfer Ownership"
+                                                    >
+                                                        <UserCog className="h-4 w-4" />
+                                                    </Button>
+                                                    {startup.websiteUrl && (
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                                                            asChild
+                                                            title="Visit Website"
+                                                        >
+                                                            <a href={startup.websiteUrl} target="_blank" rel="noopener noreferrer">
+                                                                <Globe className="h-4 w-4" />
+                                                            </a>
                                                         </Button>
-                                                    </DropdownMenuTrigger>
-                                                    <DropdownMenuContent align="end">
-                                                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                                        <DropdownMenuItem
-                                                            onClick={() => setViewDialog({ open: true, startup })}
-                                                        >
-                                                            <Eye className="mr-2 h-4 w-4" />
-                                                            View Details
-                                                        </DropdownMenuItem>
-                                                        <DropdownMenuItem
-                                                            onClick={() => setTransferDialog({ open: true, startup })}
-                                                        >
-                                                            <UserCog className="mr-2 h-4 w-4" />
-                                                            Transfer Ownership
-                                                        </DropdownMenuItem>
-                                                        {startup.websiteUrl && (
-                                                            <>
-                                                                <DropdownMenuSeparator />
-                                                                <DropdownMenuItem asChild>
-                                                                    <a href={startup.websiteUrl} target="_blank" rel="noopener noreferrer">
-                                                                        <Globe className="mr-2 h-4 w-4" />
-                                                                        Visit Website
-                                                                    </a>
-                                                                </DropdownMenuItem>
-                                                            </>
-                                                        )}
-                                                    </DropdownMenuContent>
-                                                </DropdownMenu>
+                                                    )}
+                                                </div>
                                             </TableCell>
                                         </TableRow>
                                     ))}
@@ -635,17 +628,26 @@ export function StartupRequests() {
 
             {/* View Startup Dialog */}
             <Dialog open={viewDialog.open} onOpenChange={(open) => setViewDialog(prev => ({ ...prev, open }))}>
-                <DialogContent className="max-w-3xl overflow-hidden p-0">
-                    <div className="relative h-32 bg-gradient-to-r from-primary/10 to-primary/5">
+                <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto p-0">
+                    <div className="relative h-48 w-full bg-muted">
+                        {viewDialog.startup?.coverUrl ? (
+                            <img
+                                src={viewDialog.startup.coverUrl}
+                                alt="Cover"
+                                className="w-full h-full object-cover"
+                            />
+                        ) : (
+                            <div className="w-full h-full bg-gradient-to-r from-primary/10 to-primary/5" />
+                        )}
                         <div className="absolute -bottom-10 left-8">
                             {viewDialog.startup?.logoUrl ? (
                                 <img
                                     src={viewDialog.startup.logoUrl}
                                     alt="Logo"
-                                    className="h-20 w-20 rounded-xl object-cover border-4 border-background shadow-lg"
+                                    className="h-24 w-24 rounded-xl object-cover border-4 border-background shadow-lg bg-white"
                                 />
                             ) : (
-                                <div className="h-20 w-20 rounded-xl bg-background border-4 border-background shadow-lg flex items-center justify-center">
+                                <div className="h-24 w-24 rounded-xl bg-background border-4 border-background shadow-lg flex items-center justify-center">
                                     <div className="h-full w-full bg-primary/10 rounded-lg flex items-center justify-center">
                                         <Building2 className="h-10 w-10 text-primary" />
                                     </div>
@@ -666,6 +668,38 @@ export function StartupRequests() {
                                 </DialogDescription>
                             </div>
                             <div className="flex gap-2">
+                                <div className="flex items-center gap-1 mr-2 border-r pr-2">
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-100"
+                                        onClick={() => window.open(viewDialog.startup?.facebookUrl, '_blank')}
+                                        disabled={!viewDialog.startup?.facebookUrl}
+                                        title={viewDialog.startup?.facebookUrl ? "Facebook" : "Facebook (Not Provided)"}
+                                    >
+                                        <Facebook className="h-4 w-4" />
+                                    </Button>
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-8 w-8 text-pink-600 hover:text-pink-700 hover:bg-pink-100"
+                                        onClick={() => window.open(viewDialog.startup?.instagramUrl, '_blank')}
+                                        disabled={!viewDialog.startup?.instagramUrl}
+                                        title={viewDialog.startup?.instagramUrl ? "Instagram" : "Instagram (Not Provided)"}
+                                    >
+                                        <Instagram className="h-4 w-4" />
+                                    </Button>
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-8 w-8 text-sky-500 hover:text-sky-600 hover:bg-sky-100"
+                                        onClick={() => window.open(viewDialog.startup?.twitterUrl, '_blank')}
+                                        disabled={!viewDialog.startup?.twitterUrl}
+                                        title={viewDialog.startup?.twitterUrl ? "X (Twitter)" : "X (Twitter) (Not Provided)"}
+                                    >
+                                        <Twitter className="h-4 w-4" />
+                                    </Button>
+                                </div>
                                 {viewDialog.startup?.websiteUrl && (
                                     <Button
                                         variant="outline"
@@ -736,18 +770,45 @@ export function StartupRequests() {
                                     </div>
                                 </div>
 
-                                {/* Pitch Deck */}
-                                {viewDialog.startup.pitchDeckUrl && (
-                                    <div className="pt-2">
-                                        <Button
-                                            variant="secondary"
-                                            className="w-full"
-                                            onClick={() => window.open(viewDialog.startup?.pitchDeckUrl, '_blank')}
-                                        >
-                                            View Pitch Deck Presentation
-                                        </Button>
-                                    </div>
-                                )}
+                                {/* Documents Grid */}
+                                <div className="grid grid-cols-2 gap-4 pt-2">
+                                    <Button
+                                        variant="secondary"
+                                        className="w-full justify-start"
+                                        onClick={() => window.open(viewDialog.startup?.pitchDeckUrl, '_blank')}
+                                        disabled={!viewDialog.startup?.pitchDeckUrl}
+                                    >
+                                        <FileText className="h-4 w-4 mr-2 text-blue-500" />
+                                        View Pitch Deck
+                                    </Button>
+                                    <Button
+                                        variant="secondary"
+                                        className="w-full justify-start"
+                                        onClick={() => window.open(viewDialog.startup?.financialDocumentsUrl, '_blank')}
+                                        disabled={!viewDialog.startup?.financialDocumentsUrl}
+                                    >
+                                        <FileSpreadsheet className="h-4 w-4 mr-2 text-emerald-500" />
+                                        Financial Documents
+                                    </Button>
+                                    <Button
+                                        variant="secondary"
+                                        className="w-full justify-start"
+                                        onClick={() => window.open(viewDialog.startup?.businessPlanUrl, '_blank')}
+                                        disabled={!viewDialog.startup?.businessPlanUrl}
+                                    >
+                                        <FileText className="h-4 w-4 mr-2 text-amber-500" />
+                                        Business Plan
+                                    </Button>
+                                    <Button
+                                        variant="secondary"
+                                        className="w-full justify-start"
+                                        onClick={() => window.open(viewDialog.startup?.businessModelUrl, '_blank')}
+                                        disabled={!viewDialog.startup?.businessModelUrl}
+                                    >
+                                        <FilePieChart className="h-4 w-4 mr-2 text-purple-500" />
+                                        Business Model
+                                    </Button>
+                                </div>
                             </div>
                         )}
                     </div>
@@ -923,6 +984,6 @@ export function StartupRequests() {
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
-        </div>
+        </div >
     )
 }

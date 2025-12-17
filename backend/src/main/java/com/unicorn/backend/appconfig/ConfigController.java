@@ -125,6 +125,7 @@ public class ConfigController {
      */
     @PostMapping("/api/v1/admin/config/sync-rates")
     @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
+    @SuppressWarnings("unchecked")
     public ResponseEntity<Map<String, String>> syncExchangeRates() {
         try {
             org.springframework.web.client.RestTemplate restTemplate = new org.springframework.web.client.RestTemplate();

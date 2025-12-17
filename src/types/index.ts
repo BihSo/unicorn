@@ -21,7 +21,13 @@ export interface Startup {
     raisedAmount: number;
     websiteUrl?: string;
     logoUrl?: string;
+    coverUrl?: string;
+    facebookUrl?: string;
+    instagramUrl?: string;
+    twitterUrl?: string;
     pitchDeckUrl?: string;
+    businessPlanUrl?: string;
+    businessModelUrl?: string;
     financialDocumentsUrl?: string;
     status: StartupStatus;
     ownerId: string;
