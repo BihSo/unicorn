@@ -73,4 +73,13 @@ export interface User {
     status: string;
     createdAt: string;
     lastLoginAt: string | null;
+    firstName?: string;
+    lastName?: string;
+    avatarUrl?: string;
+    username?: string;
+    displayName?: string;
+    authProvider?: string;
+    phoneNumber?: string;
+    country?: string;
+    preferredCurrency?: string;
 }

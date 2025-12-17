@@ -14,7 +14,8 @@ import {
 import { formatDate, cn } from "../../lib/utils"
 import { Startup } from "../../types"
 import { useAuth } from "../../contexts/AuthContext"
-import { LogOut, Trash2, MoreVertical } from "lucide-react"
+import { LogOut, Trash2, MoreVertical, UserPlus } from "lucide-react"
+import { AddMemberDialog } from "./AddMemberDialog"
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -69,6 +70,8 @@ export function StartupDetailsDialog({
         action: async () => { },
         variant: "default"
     })
+
+    const [isAddMemberOpen, setIsAddMemberOpen] = useState(false)
 
     // Check membership status
     const currentMember = startup?.members?.find(m => m.userId === user?.id)
@@ -405,10 +408,23 @@ export function StartupDetailsDialog({
                         {/* Team Members */}
                         {startup.members && startup.members.length > 0 && (
                             <div>
-                                <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
-                                    <Users className="h-4 w-4" />
-                                    Team Members
-                                </h4>
+                                <div className="flex items-center justify-between mb-3">
+                                    <h4 className="text-sm font-semibold flex items-center gap-2">
+                                        <Users className="h-4 w-4" />
+                                        Team Members
+                                    </h4>
+                                    {isAdminOrOwner && (
+                                        <Button
+                                            size="sm"
+                                            variant="outline"
+                                            className="h-7 text-xs"
+                                            onClick={() => setIsAddMemberOpen(true)}
+                                        >
+                                            <UserPlus className="h-3.5 w-3.5 mr-1" />
+                                            Add Member
+                                        </Button>
+                                    )}
+                                </div>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     {startup.members.map((member) => {
                                         const isOwner = member.userId === startup.ownerId;
@@ -610,6 +626,17 @@ export function StartupDetailsDialog({
                         </AlertDialogFooter>
                     </AlertDialogContent>
                 </AlertDialog>
+
+
+                <AddMemberDialog
+                    open={isAddMemberOpen}
+                    onOpenChange={setIsAddMemberOpen}
+                    startupId={startup.id}
+                    existingMemberIds={startup.members?.map(m => m.userId) || []}
+                    onSuccess={() => {
+                        onActionComplete?.()
+                    }}
+                />
             </DialogContent>
         </Dialog >
     )

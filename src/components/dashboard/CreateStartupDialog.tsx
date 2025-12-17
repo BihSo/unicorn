@@ -221,8 +221,18 @@ export function CreateStartupDialog({
 
         try {
             setIsSearching(true)
+            // Filter by STARTUP_OWNER role as requested
             const data = await searchUsers(query, 'STARTUP_OWNER')
-            setSearchResults(data.content)
+
+            let users = data.content || []
+
+            // If a startup is selected (in ADD_MEMBER mode), filter out existing members
+            if (memberStartup && memberStartup.members) {
+                const existingMemberIds = memberStartup.members.map(m => m.userId)
+                users = users.filter(u => !existingMemberIds.includes(u.id))
+            }
+
+            setSearchResults(users)
         } catch (error) {
             console.error(error)
         } finally {
