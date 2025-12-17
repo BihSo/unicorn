@@ -259,8 +259,8 @@ public class StartupService {
      * Add a member to the startup.
      */
     @Transactional
-    public StartupResponse addMember(UUID startupId, UUID userId, String role, java.time.LocalDate joinedAt,
-            java.time.LocalDate leftAt,
+    public StartupResponse addMember(UUID startupId, UUID userId, String role, java.time.LocalDateTime joinedAt,
+            java.time.LocalDateTime leftAt,
             User requester) {
         Startup startup = startupRepository.findById(startupId)
                 .orElseThrow(() -> new IllegalArgumentException("Startup not found"));
@@ -286,7 +286,7 @@ public class StartupService {
 
         StartupMember member = new StartupMember(startup, userToAdd, role, joinedAt);
         member.setLeftAt(leftAt);
-        if (leftAt != null && leftAt.isBefore(java.time.LocalDate.now())) {
+        if (leftAt != null && leftAt.isBefore(java.time.LocalDateTime.now())) {
             member.setActive(false);
         }
         startup.getMembers().add(member);
@@ -311,7 +311,7 @@ public class StartupService {
                 .findFirst()
                 .orElseThrow(() -> new IllegalArgumentException("You are not an active member of this startup"));
 
-        member.setLeftAt(java.time.LocalDate.now());
+        member.setLeftAt(java.time.LocalDateTime.now());
         member.setActive(false);
         startupRepository.save(startup);
     }
@@ -363,7 +363,7 @@ public class StartupService {
             throw new IllegalArgumentException("Cannot remove the owner. Transfer ownership first.");
         }
 
-        member.setLeftAt(java.time.LocalDate.now());
+        member.setLeftAt(java.time.LocalDateTime.now());
         member.setActive(false);
         startupRepository.save(startup);
     }

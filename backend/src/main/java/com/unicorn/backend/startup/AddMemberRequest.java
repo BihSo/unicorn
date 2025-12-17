@@ -1,11 +1,11 @@
 package com.unicorn.backend.startup;
 
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 public record AddMemberRequest(
                 UUID userId,
                 String role,
-                LocalDate joinedAt,
-                LocalDate leftAt) {
+                LocalDateTime joinedAt,
+                LocalDateTime leftAt) {
 }

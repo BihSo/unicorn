@@ -1,6 +1,6 @@
 package com.unicorn.backend.startup;
 
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 public record StartupMemberResponse(
@@ -9,8 +9,8 @@ public record StartupMemberResponse(
         String userName,
         String userAvatarUrl,
         String role,
-        LocalDate joinedAt,
-        LocalDate leftAt,
+        LocalDateTime joinedAt,
+        LocalDateTime leftAt,
         boolean isActive) {
     public static StartupMemberResponse fromEntity(StartupMember member) {
         String fullName = member.getUser().getFirstName() + " " + member.getUser().getLastName();

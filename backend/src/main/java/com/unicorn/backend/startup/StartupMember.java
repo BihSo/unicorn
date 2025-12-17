@@ -2,7 +2,7 @@ package com.unicorn.backend.startup;
 
 import com.unicorn.backend.user.User;
 import jakarta.persistence.*;
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
@@ -24,10 +24,10 @@ public class StartupMember {
     private String role; // e.g. CTO, DEVELOPER, etc.
 
     @Column(name = "joined_at")
-    private LocalDate joinedAt;
+    private LocalDateTime joinedAt;
 
     @Column(name = "left_at")
-    private LocalDate leftAt;
+    private LocalDateTime leftAt;
 
     @Column(name = "is_active")
     private boolean isActive = true;
@@ -36,7 +36,7 @@ public class StartupMember {
     public StartupMember() {
     }
 
-    public StartupMember(Startup startup, User user, String role, LocalDate joinedAt) {
+    public StartupMember(Startup startup, User user, String role, LocalDateTime joinedAt) {
         this.startup = startup;
         this.user = user;
         this.role = role;
@@ -77,19 +77,19 @@ public class StartupMember {
         this.role = role;
     }
 
-    public LocalDate getJoinedAt() {
+    public LocalDateTime getJoinedAt() {
         return joinedAt;
     }
 
-    public void setJoinedAt(LocalDate joinedAt) {
+    public void setJoinedAt(LocalDateTime joinedAt) {
         this.joinedAt = joinedAt;
     }
 
-    public LocalDate getLeftAt() {
+    public LocalDateTime getLeftAt() {
         return leftAt;
     }
 
-    public void setLeftAt(LocalDate leftAt) {
+    public void setLeftAt(LocalDateTime leftAt) {
         this.leftAt = leftAt;
         if (leftAt != null)
             this.isActive = false;
