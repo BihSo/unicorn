@@ -382,6 +382,57 @@ export async function syncExchangeRates(): Promise<Record<string, string>> {
     return handleResponse<Record<string, string>>(response);
 }
 
+// ==================== Startup Team API ====================
+
+export async function addStartupMember(startupId: string, userId: string, role: string, joinedAt: string, leftAt: string | null): Promise<Startup> {
+    const response = await fetch(`${API_BASE_URL}/startups/${startupId}/members`, {
+        method: 'POST',
+        headers: createHeaders(),
+        body: JSON.stringify({ userId, role, joinedAt, leftAt }),
+    })
+    return handleResponse<Startup>(response)
+}
+
+// Reuse existing search functionality via getAllStartups if needed, or add specialized search
+export async function searchStartups(query: string): Promise<{ content: Startup[] }> {
+    const response = await fetch(`${API_BASE_URL}/admin/startups/all?query=${encodeURIComponent(query)}&size=10`, {
+        headers: createHeaders(),
+    })
+    return handleResponse<{ content: Startup[] }>(response)
+}
+
+export async function leaveStartup(startupId: string): Promise<void> {
+    const response = await fetch(`${API_BASE_URL}/startups/${startupId}/leave`, {
+        method: 'POST',
+        headers: createHeaders(),
+    })
+    return handleResponse<void>(response)
+}
+
+export async function unsignStartup(startupId: string): Promise<void> {
+    const response = await fetch(`${API_BASE_URL}/startups/${startupId}/members/me`, {
+        method: 'DELETE',
+        headers: createHeaders(),
+    })
+    return handleResponse<void>(response)
+}
+
+export async function removeStartupMember(startupId: string, userId: string): Promise<void> {
+    const response = await fetch(`${API_BASE_URL}/startups/${startupId}/members/${userId}/remove`, {
+        method: 'POST',
+        headers: createHeaders(),
+    })
+    return handleResponse<void>(response)
+}
+
+export async function unsignStartupMember(startupId: string, userId: string): Promise<void> {
+    const response = await fetch(`${API_BASE_URL}/startups/${startupId}/members/${userId}`, {
+        method: 'DELETE',
+        headers: createHeaders(),
+    })
+    return handleResponse<void>(response)
+}
+
 // ==================== Security API ====================
 
 export interface SecurityStats {

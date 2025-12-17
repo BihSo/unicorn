@@ -11,6 +11,18 @@ export type StartupStatus = 'ACTIVE' | 'APPROVED';
 
 export type StartupRole = 'FOUNDER' | 'CO_FOUNDER' | 'CEO' | 'CTO' | 'COO' | 'CFO' | 'CMO' | 'CHIEF_PRODUCT_OFFICER' | 'OTHER';
 
+// Startup Member interface
+export interface StartupMember {
+    id: string;
+    userId: string;
+    userName: string;
+    userAvatarUrl: string;
+    role: string;
+    joinedAt: string;
+    leftAt?: string;
+    isActive: boolean;
+}
+
 // Startup interface (matches backend StartupResponse DTO)
 export interface Startup {
     id: string;
@@ -37,6 +49,7 @@ export interface Startup {
     ownerRole?: StartupRole;
     createdAt: string;
     updatedAt: string;
+    members: StartupMember[];
 }
 
 // Request to update startup status (admin)

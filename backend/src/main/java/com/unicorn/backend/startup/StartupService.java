@@ -22,6 +22,7 @@ public class StartupService {
 
     private final StartupRepository startupRepository;
     private final UserRepository userRepository;
+    private final StartupMemberRepository startupMemberRepository;
 
     /**
      * Create a new startup for the authenticated user.
@@ -252,5 +253,148 @@ public class StartupService {
         Startup startup = startupRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Startup not found: " + id));
         return StartupResponse.fromEntity(startup);
+    }
+
+    /**
+     * Add a member to the startup.
+     */
+    @Transactional
+    public StartupResponse addMember(UUID startupId, UUID userId, String role, java.time.LocalDate joinedAt,
+            java.time.LocalDate leftAt,
+            User requester) {
+        Startup startup = startupRepository.findById(startupId)
+                .orElseThrow(() -> new IllegalArgumentException("Startup not found"));
+
+        User userToAdd = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+        // Validate requester is Owner or Admin
+        boolean isAdmin = requester.getRole().contains("ADMIN");
+        boolean isOwner = startup.getOwner().getId().equals(requester.getId());
+
+        if (!isAdmin && !isOwner) {
+            throw new AccessDeniedException("Only the owner or admin can add members.");
+        }
+
+        // Check if already a member
+        boolean alreadyMember = startup.getMembers().stream()
+                .anyMatch(m -> m.getUser().getId().equals(userId) && m.isActive());
+
+        if (alreadyMember) {
+            throw new IllegalArgumentException("User is already an active member of this startup.");
+        }
+
+        StartupMember member = new StartupMember(startup, userToAdd, role, joinedAt);
+        member.setLeftAt(leftAt);
+        if (leftAt != null && leftAt.isBefore(java.time.LocalDate.now())) {
+            member.setActive(false);
+        }
+        startup.getMembers().add(member);
+
+        Startup savedStartup = startupRepository.save(startup);
+        return StartupResponse.fromEntity(savedStartup);
+    }
+
+    /**
+     * Leave a startup (Soft Delete).
+     *
+     * @param startupId the startup ID
+     * @param user      the authenticated user
+     */
+    @Transactional
+    public void leaveStartup(UUID startupId, User user) {
+        Startup startup = startupRepository.findById(startupId)
+                .orElseThrow(() -> new IllegalArgumentException("Startup not found"));
+
+        StartupMember member = startup.getMembers().stream()
+                .filter(m -> m.getUser().getId().equals(user.getId()) && m.isActive())
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("You are not an active member of this startup"));
+
+        member.setLeftAt(java.time.LocalDate.now());
+        member.setActive(false);
+        startupRepository.save(startup);
+    }
+
+    /**
+     * Unsign from a startup (Hard Delete).
+     *
+     * @param startupId the startup ID
+     * @param user      the authenticated user
+     */
+    @Transactional
+    public void unsignStartup(UUID startupId, User user) {
+        Startup startup = startupRepository.findById(startupId)
+                .orElseThrow(() -> new IllegalArgumentException("Startup not found"));
+
+        // Find match regardless of active status
+        StartupMember member = startup.getMembers().stream()
+                .filter(m -> m.getUser().getId().equals(user.getId()))
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("You are not a member of this startup"));
+
+        startup.getMembers().remove(member);
+        startupMemberRepository.delete(member);
+        startupRepository.save(startup);
+    }
+
+    /**
+     * Remove a member (Soft Delete) - Admin/Owner Action.
+     */
+    @Transactional
+    public void removeMember(UUID startupId, UUID memberUserId, User requester) {
+        Startup startup = startupRepository.findById(startupId)
+                .orElseThrow(() -> new IllegalArgumentException("Startup not found"));
+
+        // Validate requester is Owner or Admin
+        boolean isAdmin = requester.getRole().contains("ADMIN");
+        boolean isOwner = startup.getOwner().getId().equals(requester.getId());
+        if (!isAdmin && !isOwner) {
+            throw new AccessDeniedException("Only the owner or admin can remove members.");
+        }
+
+        StartupMember member = startup.getMembers().stream()
+                .filter(m -> m.getUser().getId().equals(memberUserId) && m.isActive())
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("Target user is not an active member of this startup"));
+
+        // Prevent removing the owner via this method (should use transfer ownership)
+        if (member.getUser().getId().equals(startup.getOwner().getId())) {
+            throw new IllegalArgumentException("Cannot remove the owner. Transfer ownership first.");
+        }
+
+        member.setLeftAt(java.time.LocalDate.now());
+        member.setActive(false);
+        startupRepository.save(startup);
+    }
+
+    /**
+     * Delete a member (Hard Delete) - Admin/Owner Action.
+     */
+    @Transactional
+    public void deleteMember(UUID startupId, UUID memberUserId, User requester) {
+        Startup startup = startupRepository.findById(startupId)
+                .orElseThrow(() -> new IllegalArgumentException("Startup not found"));
+
+        // Validate requester is Owner or Admin
+        boolean isAdmin = requester.getRole().contains("ADMIN");
+        boolean isOwner = startup.getOwner().getId().equals(requester.getId());
+        if (!isAdmin && !isOwner) {
+            throw new AccessDeniedException("Only the owner or admin can delete members.");
+        }
+
+        StartupMember member = startup.getMembers().stream()
+                .filter(m -> m.getUser().getId().equals(memberUserId))
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("Target user is not a member of this startup"));
+
+        // Prevent deleting the owner
+        if (member.getUser().getId().equals(startup.getOwner().getId())) {
+            throw new IllegalArgumentException("Cannot delete the owner. Transfer ownership first.");
+        }
+
+        startup.getMembers().remove(member);
+        startupMemberRepository.delete(member);
+        startupRepository.save(startup);
     }
 }

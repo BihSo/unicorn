@@ -93,6 +93,10 @@ public class Startup {
     @JoinColumn(name = "owner_id", nullable = false)
     private User owner;
 
+    @OneToMany(mappedBy = "startup", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private java.util.List<StartupMember> members = new java.util.ArrayList<>();
+
     @CreationTimestamp
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;

@@ -1,6 +1,6 @@
 import { KPICard } from '../components/dashboard/KPICard'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/card'
-import { Shield, Key, AlertTriangle, CheckCircle, Lock, Monitor, Clock, RefreshCw, Smartphone, Laptop, History, Users } from 'lucide-react'
+import { Shield, Key, AlertTriangle, CheckCircle, Lock, Monitor, Clock, RefreshCw, Laptop, History, Users } from 'lucide-react'
 import { formatNumber } from '../lib/utils'
 import { useAuth } from '../contexts/AuthContext'
 import { jwtDecode } from 'jwt-decode'
@@ -9,7 +9,7 @@ import { fetchSecurityStats, SecurityStats } from '../lib/api'
 import { toast } from 'sonner'
 import {
     AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-    PieChart, Pie, Cell, BarChart, Bar, Legend
+    PieChart, Pie, Cell, Legend
 } from 'recharts'
 
 export function Security() {
@@ -20,8 +20,18 @@ export function Security() {
     const [stats, setStats] = useState<SecurityStats | null>(null)
     const [loading, setLoading] = useState(true)
 
-    // Colors for charts
-    const COLORS = ['#8b5cf6', '#6366f1', '#ec4899', '#f43f5e', '#10b981', '#f59e0b']
+    // Brand Colors for Devices
+    const DEVICE_COLORS: Record<string, string> = {
+        Chrome: '#4285F4', // Google Blue
+        Firefox: '#FF7139', // Firefox Orange
+        Safari: '#00C7E6', // Safari Cyan
+        Edge: '#0078D7', // Edge Blue
+        Opera: '#FF1B2D', // Opera Red
+        Android: '#3DDC84', // Android Green
+        iOS: '#5856D6', // iOS Purple
+        Other: '#6B7280', // Gray
+    }
+    const DEFAULT_COLORS = ['#8b5cf6', '#6366f1', '#ec4899', '#f43f5e', '#10b981', '#f59e0b']
 
     useEffect(() => {
         loadStats()
@@ -103,11 +113,6 @@ export function Security() {
             date: new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
             sessions: count
         })) : []
-
-    const statusData = stats ? [
-        { name: 'Active', value: stats.activeSessions },
-        { name: 'Expired', value: stats.expiredTokens }
-    ] : []
 
     if (loading) {
         return <div className="p-8 flex items-center justify-center">Loading security dashboard...</div>
@@ -241,11 +246,14 @@ export function Security() {
                                                 cy="50%"
                                                 innerRadius={60}
                                                 outerRadius={100}
-                                                paddingAngle={5}
+                                                paddingAngle={2}
                                                 dataKey="value"
                                             >
                                                 {deviceData.map((entry, index) => (
-                                                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                                    <Cell
+                                                        key={`cell-${index}`}
+                                                        fill={DEVICE_COLORS[entry.name] || DEFAULT_COLORS[index % DEFAULT_COLORS.length]}
+                                                    />
                                                 ))}
                                             </Pie>
                                             <Tooltip

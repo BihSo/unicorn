@@ -42,6 +42,8 @@ public class StartupResponse {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
+    private java.util.List<StartupMemberResponse> members;
+
     /**
      * Converts a Startup entity to a StartupResponse DTO.
      *
@@ -74,6 +76,10 @@ public class StartupResponse {
                 .ownerRole(startup.getOwnerRole())
                 .createdAt(startup.getCreatedAt())
                 .updatedAt(startup.getUpdatedAt())
+                .members(startup.getMembers() != null ? startup.getMembers().stream()
+                        .map(StartupMemberResponse::fromEntity)
+                        .collect(java.util.stream.Collectors.toList())
+                        : new java.util.ArrayList<>())
                 .build();
     }
 }

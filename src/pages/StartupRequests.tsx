@@ -13,18 +13,12 @@ import {
     XCircle,
     DollarSign,
     Search,
-    FileText,
     Download,
     UserPlus,
     ChevronsLeft,
     ChevronsRight,
     ChevronLeft,
     ChevronRight,
-    Facebook,
-    Instagram,
-    Twitter,
-    FileSpreadsheet,
-    FilePieChart
 } from "lucide-react"
 import { toast } from "sonner"
 
@@ -74,7 +68,8 @@ import {
     fetchAllStartups,
     fetchStartupStats,
     searchUsers,
-    transferStartupOwnership
+    transferStartupOwnership,
+    getStartupById
 } from '../lib/api'
 import { Startup, StartupStats, User } from '../types'
 import { formatCurrency, formatDate, formatNumber } from '../lib/utils'
@@ -639,6 +634,19 @@ export function StartupRequests() {
                 onTransfer={(startup) => {
                     setTransferDialog({ open: true, startup });
                     setViewDialog(prev => ({ ...prev, open: false }));
+                }}
+                onActionComplete={async () => {
+                    // 1. Refresh the main list
+                    loadData();
+                    // 2. Refresh the currently viewed startup details
+                    if (viewDialog.startup) {
+                        try {
+                            const updatedStartup = await getStartupById(viewDialog.startup.id);
+                            setViewDialog(prev => ({ ...prev, startup: updatedStartup }));
+                        } catch (err) {
+                            console.error("Failed to refresh startup details", err);
+                        }
+                    }
                 }}
             />
 

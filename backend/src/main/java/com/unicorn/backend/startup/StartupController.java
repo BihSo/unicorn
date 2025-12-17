@@ -119,7 +119,7 @@ public class StartupController {
 
         // Security Check: Is Admin OR Current Owner?
         boolean isAdmin = currentUser.getRole().contains("ADMIN");
-        boolean isOwner = startup.getOwnerId().equals(currentUser.getId());
+        boolean isOwner = startup.getOwnerId().equals(currentUser.getId().toString());
 
         if (!isAdmin && !isOwner) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
@@ -130,5 +130,70 @@ public class StartupController {
 
         StartupResponse updated = startupService.transferOwnership(id, newOwner);
         return ResponseEntity.ok(updated);
+    }
+
+    /**
+     * Add a member to the startup.
+     */
+    @PostMapping("/{id}/members")
+    public ResponseEntity<StartupResponse> addMember(
+            @PathVariable UUID id,
+            @RequestBody @Valid AddMemberRequest request,
+            @AuthenticationPrincipal User user) {
+
+        StartupResponse response = startupService.addMember(
+                id,
+                request.userId(),
+                request.role(),
+                request.joinedAt(),
+                request.leftAt(),
+                user);
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * Leave a startup (Soft Delete).
+     */
+    @PostMapping("/{id}/leave")
+    public ResponseEntity<Void> leaveStartup(
+            @PathVariable UUID id,
+            @AuthenticationPrincipal User user) {
+        startupService.leaveStartup(id, user);
+        return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * Unsign from a startup (Hard Delete).
+     */
+    @DeleteMapping("/{id}/members/me")
+    public ResponseEntity<Void> unsignStartup(
+            @PathVariable UUID id,
+            @AuthenticationPrincipal User user) {
+        startupService.unsignStartup(id, user);
+        return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * Remove a member (Soft Delete) - Admin/Owner.
+     */
+    @PostMapping("/{id}/members/{userId}/remove")
+    public ResponseEntity<Void> removeMember(
+            @PathVariable UUID id,
+            @PathVariable UUID userId,
+            @AuthenticationPrincipal User user) {
+        startupService.removeMember(id, userId, user);
+        return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * Delete a member (Hard Delete) - Admin/Owner.
+     */
+    @DeleteMapping("/{id}/members/{userId}")
+    public ResponseEntity<Void> deleteMember(
+            @PathVariable UUID id,
+            @PathVariable UUID userId,
+            @AuthenticationPrincipal User user) {
+        startupService.deleteMember(id, userId, user);
+        return ResponseEntity.noContent().build();
     }
 }

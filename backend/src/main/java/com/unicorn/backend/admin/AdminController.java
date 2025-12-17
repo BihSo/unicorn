@@ -409,20 +409,23 @@ public class AdminController {
             String agent = t.getUserAgent();
             String device = "Unknown";
             if (agent != null) {
-                if (agent.contains("Chrome"))
-                    device = "Chrome";
-                else if (agent.contains("Firefox"))
-                    device = "Firefox";
-                else if (agent.contains("Safari") && !agent.contains("Chrome"))
-                    device = "Safari";
-                else if (agent.contains("Edge"))
+                if (agent.contains("Edg")) {
                     device = "Edge";
-                else if (agent.contains("Android"))
+                } else if (agent.contains("OPR") || agent.contains("Opera")) {
+                    device = "Opera";
+                } else if (agent.contains("Chrome")) {
+                    device = "Chrome";
+                } else if (agent.contains("Firefox")) {
+                    device = "Firefox";
+                } else if (agent.contains("Safari")) {
+                    device = "Safari";
+                } else if (agent.contains("Android")) {
                     device = "Android";
-                else if (agent.contains("iPhone") || agent.contains("iPad"))
+                } else if (agent.contains("iPhone") || agent.contains("iPad")) {
                     device = "iOS";
-                else
+                } else {
                     device = "Other";
+                }
             }
             deviceStats.merge(device, 1L, Long::sum);
 
