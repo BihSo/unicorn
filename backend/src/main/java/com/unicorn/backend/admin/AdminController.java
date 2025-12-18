@@ -119,6 +119,8 @@ public class AdminController {
             @org.springframework.web.bind.annotation.RequestParam(required = false) Boolean hasInvestorProfileNegate,
             @org.springframework.web.bind.annotation.RequestParam(required = false) Boolean hasStartups,
             @org.springframework.web.bind.annotation.RequestParam(required = false) Boolean hasStartupsNegate,
+            @org.springframework.web.bind.annotation.RequestParam(required = false) Boolean isMemberOfStartups,
+            @org.springframework.web.bind.annotation.RequestParam(required = false) Boolean isMemberOfStartupsNegate,
             @org.springframework.web.bind.annotation.RequestParam(required = false) Boolean isSuspended,
             @org.springframework.web.bind.annotation.RequestParam(required = false) Boolean isSuspendedNegate,
             @org.springframework.web.bind.annotation.RequestParam(required = false) Integer minWarningCount,
@@ -139,8 +141,8 @@ public class AdminController {
                     role != null || status != null || authProvider != null ||
                     createdAtFrom != null || createdAtTo != null ||
                     lastLoginFrom != null || lastLoginTo != null ||
-                    hasInvestorProfile != null || hasStartups != null || isSuspended != null ||
-                    minWarningCount != null || hasActiveSession != null;
+                    hasInvestorProfile != null || hasStartups != null || isMemberOfStartups != null ||
+                    isSuspended != null || minWarningCount != null || hasActiveSession != null;
 
             System.out.println("DEBUG: hasAdvancedFilters: " + hasAdvancedFilters);
 
@@ -175,6 +177,8 @@ public class AdminController {
                         .hasInvestorProfileNegate(hasInvestorProfileNegate)
                         .hasStartups(hasStartups)
                         .hasStartupsNegate(hasStartupsNegate)
+                        .isMemberOfStartups(isMemberOfStartups)
+                        .isMemberOfStartupsNegate(isMemberOfStartupsNegate)
                         .isSuspended(isSuspended)
                         .isSuspendedNegate(isSuspendedNegate)
                         .minWarningCount(minWarningCount)
@@ -322,6 +326,8 @@ public class AdminController {
             @RequestParam(required = false) Boolean industryNegate,
             @RequestParam(required = false) String ownerEmail,
             @RequestParam(required = false) Boolean ownerEmailNegate,
+            @RequestParam(required = false) String memberEmail,
+            @RequestParam(required = false) Boolean memberEmailNegate,
             @RequestParam(required = false) String stage,
             @RequestParam(required = false) Boolean stageNegate,
             @RequestParam(required = false) String status,
@@ -345,6 +351,8 @@ public class AdminController {
                 .industryNegate(industryNegate)
                 .ownerEmail(ownerEmail)
                 .ownerEmailNegate(ownerEmailNegate)
+                .memberEmail(memberEmail) // New mapping
+                .memberEmailNegate(memberEmailNegate) // New mapping
                 .stage(stage)
                 .stageNegate(stageNegate)
                 .status(status)

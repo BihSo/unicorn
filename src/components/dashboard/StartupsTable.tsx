@@ -1,3 +1,5 @@
+import { Input } from '../ui/input'
+import { Button } from '../ui/button'
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table'
@@ -12,12 +14,17 @@ export function StartupsTable() {
     const [loading, setLoading] = useState(true)
     const [selectedStartup, setSelectedStartup] = useState<Startup | null>(null)
     const [isModalOpen, setIsModalOpen] = useState(false)
+    const [memberEmail, setMemberEmail] = useState('')
     const { token } = useAuth()
 
     const fetchAllStartups = async () => {
         setLoading(true)
         try {
-            const response = await fetch('/api/v1/admin/startups/all?page=0&size=100', {
+            let url = '/api/v1/admin/startups/all?page=0&size=100'
+            if (memberEmail) {
+                url += `&memberEmail=${encodeURIComponent(memberEmail)}`
+            }
+            const response = await fetch(url, {
                 headers: {
                     'Authorization': `Bearer ${token}`,
                 },
@@ -93,10 +100,29 @@ export function StartupsTable() {
         <>
             <Card>
                 <CardHeader>
-                    <CardTitle>All Startups</CardTitle>
-                    <CardDescription>
-                        {startups.length} startup{startups.length !== 1 ? 's' : ''} registered
-                    </CardDescription>
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <CardTitle>All Startups</CardTitle>
+                            <CardDescription>
+                                {startups.length} startup{startups.length !== 1 ? 's' : ''} registered
+                            </CardDescription>
+                        </div>
+                        <div className="flex gap-2">
+                            <Input
+                                type="text"
+                                placeholder="Search by member email..."
+                                value={memberEmail}
+                                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setMemberEmail(e.target.value)}
+                                onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => e.key === 'Enter' && fetchAllStartups()}
+                                className="w-64"
+                            />
+                            <Button
+                                onClick={fetchAllStartups}
+                            >
+                                Search
+                            </Button>
+                        </div>
+                    </div>
                 </CardHeader>
                 <CardContent>
                     {startups.length === 0 ? (

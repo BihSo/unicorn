@@ -7,7 +7,7 @@ import { Label } from '../ui/label'
 import { Switch } from '../ui/switch'
 import {
     Filter, ChevronDown, ChevronUp, RotateCcw,
-    Building2, Activity, DollarSign, Calendar, Layers, Mail
+    Building2, Activity, DollarSign, Calendar, Layers, Mail, UserCog
 } from 'lucide-react'
 import { cn } from '../../lib/utils'
 
@@ -17,8 +17,11 @@ export interface StartupFilterState {
     nameNegate?: boolean
     industry?: string
     industryNegate?: boolean
+
     ownerEmail?: string
     ownerEmailNegate?: boolean
+    memberEmail?: string
+    memberEmailNegate?: boolean
 
     // Select filters
     stage?: string
@@ -170,6 +173,20 @@ export function StartupsFilters({ filters, onFiltersChange, onApply, onClear }: 
                                     placeholder="Search owner email..."
                                     value={filters.ownerEmail || ''}
                                     onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateFilter('ownerEmail', e.target.value || undefined)}
+                                />
+                            </FilterRow>
+
+                            <FilterRow
+                                label="Member Email"
+                                icon={UserCog}
+                                negateValue={filters.memberEmailNegate}
+                                onNegateChange={(checked) => updateFilter('memberEmailNegate', checked)}
+                                hasValue={!!filters.memberEmail}
+                            >
+                                <Input
+                                    placeholder="Search member email..."
+                                    value={filters.memberEmail || ''}
+                                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateFilter('memberEmail', e.target.value || undefined)}
                                 />
                             </FilterRow>
                         </div>

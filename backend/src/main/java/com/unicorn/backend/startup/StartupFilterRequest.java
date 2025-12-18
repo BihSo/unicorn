@@ -30,6 +30,9 @@ public class StartupFilterRequest {
     private String ownerEmail;
     private Boolean ownerEmailNegate;
 
+    private String memberEmail;
+    private Boolean memberEmailNegate;
+
     // Enum Filters
     private String stage;
     private Boolean stageNegate;
@@ -56,7 +59,7 @@ public class StartupFilterRequest {
      * Check if any filter is active.
      */
     public boolean hasAnyFilter() {
-        return globalQuery != null || name != null || industry != null || ownerEmail != null ||
+        return globalQuery != null || name != null || industry != null || ownerEmail != null || memberEmail != null ||
                 stage != null || status != null ||
                 fundingGoalMin != null || fundingGoalMax != null ||
                 raisedAmountMin != null || raisedAmountMax != null ||

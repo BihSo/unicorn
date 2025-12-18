@@ -43,9 +43,36 @@ public class StartupSpecification {
             // Owner Email Filter (Requires Join)
             if (filter.getOwnerEmail() != null && !filter.getOwnerEmail().trim().isEmpty()) {
                 Join<Startup, User> owner = root.join("owner", JoinType.LEFT);
-                Predicate predicate = criteriaBuilder.like(criteriaBuilder.lower(owner.get("email")),
-                        "%" + filter.getOwnerEmail().toLowerCase() + "%");
-                predicates.add(applyNegation(criteriaBuilder, predicate, filter.getOwnerEmailNegate()));
+                String[] parts = filter.getOwnerEmail().split(",");
+                List<Predicate> orPredicates = new ArrayList<>();
+                for (String part : parts) {
+                    if (!part.trim().isEmpty()) {
+                        orPredicates.add(criteriaBuilder.like(criteriaBuilder.lower(owner.get("email")),
+                                "%" + part.trim().toLowerCase() + "%"));
+                    }
+                }
+                if (!orPredicates.isEmpty()) {
+                    Predicate combined = criteriaBuilder.or(orPredicates.toArray(new Predicate[0]));
+                    predicates.add(applyNegation(criteriaBuilder, combined, filter.getOwnerEmailNegate()));
+                }
+            }
+
+            // Member Email Filter (Requires Join on StartupMember -> User)
+            if (filter.getMemberEmail() != null && !filter.getMemberEmail().trim().isEmpty()) {
+                Join<Startup, StartupMember> members = root.join("members", JoinType.LEFT);
+                Join<StartupMember, User> memberUser = members.join("user", JoinType.LEFT);
+                String[] parts = filter.getMemberEmail().split(",");
+                List<Predicate> orPredicates = new ArrayList<>();
+                for (String part : parts) {
+                    if (!part.trim().isEmpty()) {
+                        orPredicates.add(criteriaBuilder.like(criteriaBuilder.lower(memberUser.get("email")),
+                                "%" + part.trim().toLowerCase() + "%"));
+                    }
+                }
+                if (!orPredicates.isEmpty()) {
+                    Predicate combined = criteriaBuilder.or(orPredicates.toArray(new Predicate[0]));
+                    predicates.add(applyNegation(criteriaBuilder, combined, filter.getMemberEmailNegate()));
+                }
             }
 
             // Enum Filters
@@ -73,8 +100,17 @@ public class StartupSpecification {
     private static void addTextFilter(List<Predicate> predicates, CriteriaBuilder cb,
             Path<String> path, String value, Boolean negate) {
         if (value != null && !value.trim().isEmpty()) {
-            Predicate predicate = cb.like(cb.lower(path), "%" + value.toLowerCase() + "%");
-            predicates.add(applyNegation(cb, predicate, negate));
+            String[] parts = value.split(",");
+            List<Predicate> orPredicates = new ArrayList<>();
+            for (String part : parts) {
+                if (!part.trim().isEmpty()) {
+                    orPredicates.add(cb.like(cb.lower(path), "%" + part.trim().toLowerCase() + "%"));
+                }
+            }
+            if (!orPredicates.isEmpty()) {
+                Predicate combined = cb.or(orPredicates.toArray(new Predicate[0]));
+                predicates.add(applyNegation(cb, combined, negate));
+            }
         }
     }
 

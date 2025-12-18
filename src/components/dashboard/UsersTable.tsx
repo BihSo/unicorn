@@ -290,6 +290,10 @@ export function UsersTable() {
             params.append('hasStartups', String(filterState.hasStartups))
             if (filterState.hasStartupsNegate) params.append('hasStartupsNegate', 'true')
         }
+        if (filterState.isMemberOfStartups !== undefined) {
+            params.append('isMemberOfStartups', String(filterState.isMemberOfStartups))
+            if (filterState.isMemberOfStartupsNegate) params.append('isMemberOfStartupsNegate', 'true')
+        }
         if (filterState.isSuspended !== undefined) {
             params.append('isSuspended', String(filterState.isSuspended))
             if (filterState.isSuspendedNegate) params.append('isSuspendedNegate', 'true')

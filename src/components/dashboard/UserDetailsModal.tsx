@@ -82,6 +82,7 @@ interface UserDetails {
         name: string
         industry?: string
         stage?: string
+        role?: string
         status?: string
         raisedAmount?: number
         createdAt?: string
@@ -584,6 +585,14 @@ export function UserDetailsModal({ userId, open, onOpenChange, onAction }: UserD
                                                                 </Badge>
                                                                 <span>•</span>
                                                                 <span>{startup.stage}</span>
+                                                                {startup.role && (
+                                                                    <>
+                                                                        <span>•</span>
+                                                                        <Badge variant="outline" className="text-xs font-normal border-primary/20 text-primary">
+                                                                            {startup.role}
+                                                                        </Badge>
+                                                                    </>
+                                                                )}
                                                             </div>
                                                         </div>
                                                         <div className="flex flex-col items-end gap-2">

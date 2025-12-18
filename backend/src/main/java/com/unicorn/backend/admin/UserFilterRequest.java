@@ -75,6 +75,9 @@ public class UserFilterRequest {
     private Boolean hasStartups;
     private Boolean hasStartupsNegate;
 
+    private Boolean isMemberOfStartups;
+    private Boolean isMemberOfStartupsNegate;
+
     private Boolean isVerifiedInvestor;
     private Boolean isVerifiedInvestorNegate;
 
@@ -97,7 +100,7 @@ public class UserFilterRequest {
                 createdAtFrom != null || createdAtTo != null ||
                 lastLoginFrom != null || lastLoginTo != null ||
                 suspendedAtFrom != null || suspendedAtTo != null ||
-                hasInvestorProfile != null || hasStartups != null ||
+                hasInvestorProfile != null || hasStartups != null || isMemberOfStartups != null ||
                 isVerifiedInvestor != null || isSuspended != null ||
                 minWarningCount != null || hasActiveSession != null;
     }

@@ -150,6 +150,8 @@ export function StartupRequests() {
         loadData()
     }, [page, pageSize, appliedFilters])
 
+
+
     // Update filters when quick search changes changes (debounced)
     useEffect(() => {
         const timer = setTimeout(() => {
@@ -430,6 +432,7 @@ export function StartupRequests() {
                                     className="pl-8"
                                 />
                             </div>
+
                             <div className="flex items-center gap-2">
                                 <Button variant="outline" size="sm" onClick={loadData} className="flex-1 sm:flex-none">
                                     <RefreshCcw className="h-4 w-4 mr-2" />
@@ -490,6 +493,12 @@ export function StartupRequests() {
                                                             <UserCog className="h-3 w-3" />
                                                             {startup.ownerEmail}
                                                         </div>
+                                                        {filters.memberEmail && (
+                                                            <div className="flex items-center gap-1 text-xs text-blue-500">
+                                                                <UserCog className="h-3 w-3" />
+                                                                Member: {filters.memberEmail}
+                                                            </div>
+                                                        )}
                                                     </div>
                                                 </div>
                                             </TableCell>

@@ -98,6 +98,17 @@ public class UserSpecification {
                 }
             }
 
+            // Boolean Filters - Is Member of Startups (Joined)
+            if (filter.getIsMemberOfStartups() != null) {
+                Predicate isMember = criteriaBuilder.isNotEmpty(root.get("memberships"));
+                if (filter.getIsMemberOfStartups()) {
+                    predicates.add(applyNegation(criteriaBuilder, isMember, filter.getIsMemberOfStartupsNegate()));
+                } else {
+                    predicates.add(applyNegation(criteriaBuilder, criteriaBuilder.isEmpty(root.get("memberships")),
+                            filter.getIsMemberOfStartupsNegate()));
+                }
+            }
+
             // Boolean Filters - Is Suspended
             if (filter.getIsSuspended() != null) {
                 Predicate isSuspended = criteriaBuilder.equal(root.get("status"), "SUSPENDED");
@@ -152,8 +163,17 @@ public class UserSpecification {
     private static void addTextFilter(List<Predicate> predicates, CriteriaBuilder cb,
             Path<String> path, String value, Boolean negate) {
         if (value != null && !value.trim().isEmpty()) {
-            Predicate predicate = cb.like(cb.lower(path), "%" + value.toLowerCase() + "%");
-            predicates.add(applyNegation(cb, predicate, negate));
+            String[] parts = value.split(",");
+            List<Predicate> orPredicates = new ArrayList<>();
+            for (String part : parts) {
+                if (!part.trim().isEmpty()) {
+                    orPredicates.add(cb.like(cb.lower(path), "%" + part.trim().toLowerCase() + "%"));
+                }
+            }
+            if (!orPredicates.isEmpty()) {
+                Predicate combined = cb.or(orPredicates.toArray(new Predicate[0]));
+                predicates.add(applyNegation(cb, combined, negate));
+            }
         }
     }
 

@@ -55,6 +55,9 @@ export interface FilterState {
     minWarningCountNegate?: boolean
     hasActiveSession?: boolean
     hasActiveSessionNegate?: boolean
+
+    isMemberOfStartups?: boolean
+    isMemberOfStartupsNegate?: boolean
 }
 
 interface UserFiltersProps {
@@ -404,6 +407,26 @@ export function UserFilters({ filters, onFiltersChange, onApply, onClear }: User
                                 <Select
                                     value={filters.hasStartups === undefined ? '__ANY__' : String(filters.hasStartups)}
                                     onValueChange={(value) => updateFilter('hasStartups', value === '__ANY__' ? undefined : value === 'true')}
+                                >
+                                    <SelectTrigger className="w-24">
+                                        <SelectValue placeholder="Any" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="__ANY__">Any</SelectItem>
+                                        <SelectItem value="true">Yes</SelectItem>
+                                        <SelectItem value="false">No</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
+                            <div className="flex items-center justify-between p-3 border rounded-lg">
+                                <div className="flex items-center gap-2">
+                                    <Briefcase className="h-4 w-4 text-muted-foreground" />
+                                    <span className="text-sm">Is Member of Startups (Joined)</span>
+                                </div>
+                                <Select
+                                    value={filters.isMemberOfStartups === undefined ? '__ANY__' : String(filters.isMemberOfStartups)}
+                                    onValueChange={(value) => updateFilter('isMemberOfStartups', value === '__ANY__' ? undefined : value === 'true')}
                                 >
                                     <SelectTrigger className="w-24">
                                         <SelectValue placeholder="Any" />
