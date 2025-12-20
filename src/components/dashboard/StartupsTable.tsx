@@ -6,7 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { Startup } from '../../types'
 import { formatDate } from '../../lib/utils'
 import { StartupDetailsModal } from '../admin/StartupDetailsModal'
-import { useAuth } from '../../contexts/AuthContext'
+import { fetchAllStartups as fetchStartupsApi } from '../../lib/api'
 import { toast } from 'sonner'
 
 export function StartupsTable() {
@@ -15,27 +15,12 @@ export function StartupsTable() {
     const [selectedStartup, setSelectedStartup] = useState<Startup | null>(null)
     const [isModalOpen, setIsModalOpen] = useState(false)
     const [memberEmail, setMemberEmail] = useState('')
-    const { token } = useAuth()
 
     const fetchAllStartups = async () => {
         setLoading(true)
         try {
-            let url = '/api/v1/admin/startups/all?page=0&size=100'
-            if (memberEmail) {
-                url += `&memberEmail=${encodeURIComponent(memberEmail)}`
-            }
-            const response = await fetch(url, {
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                },
-            })
-
-            if (!response.ok) {
-                throw new Error('Failed to fetch startups')
-            }
-
-            const data = await response.json()
-            setStartups(data.content || data)
+            const data = await fetchStartupsApi(0, 100, { memberEmail })
+            setStartups(data.content)
         } catch (error: any) {
             toast.error(error.message || 'Failed to load startups')
         } finally {

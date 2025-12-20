@@ -3,7 +3,7 @@ import { Startup, StartupStatus } from '../../types';
 import { Button } from '../ui/button';
 import { ExternalLink, Trash2, DollarSign } from 'lucide-react';
 import { toast } from 'sonner';
-import { useAuth } from '../../contexts/AuthContext';
+import { deleteStartup } from '../../lib/api';
 
 interface StartupDetailsModalProps {
     startup: Startup | null;
@@ -14,7 +14,6 @@ interface StartupDetailsModalProps {
 
 export function StartupDetailsModal({ startup, isOpen, onClose, onActionComplete }: StartupDetailsModalProps) {
     const [isDeleting, setIsDeleting] = useState(false);
-    const { token } = useAuth();
 
     if (!isOpen || !startup) return null;
 
@@ -25,16 +24,7 @@ export function StartupDetailsModal({ startup, isOpen, onClose, onActionComplete
 
         setIsDeleting(true);
         try {
-            const response = await fetch(`/api/v1/admin/startups/${startup.id}`, {
-                method: 'DELETE',
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                },
-            });
-
-            if (!response.ok) {
-                throw new Error('Failed to delete startup');
-            }
+            await deleteStartup(startup.id);
 
             toast.success('Startup deleted permanently');
             onActionComplete();

@@ -1,70 +1,26 @@
 /**
  * API service module for making HTTP requests to the backend.
- * Handles authentication tokens and provides typed API methods.
+ * Handles authentication tokens via shared Axios instance and provides typed API methods.
  */
 
 import { Startup, StartupStats, User } from '../types';
+import api from './axios';
+import { AxiosResponse } from 'axios';
 
-const API_BASE_URL = '/api/v1';
-
-/**
- * Get the authentication token from localStorage.
- */
-function getAuthToken(): string | null {
-    return localStorage.getItem('token');
-}
-
-/**
- * Create headers with authentication.
- */
-function createHeaders(includeAuth: boolean = true): HeadersInit {
-    const headers: HeadersInit = {
-        'Content-Type': 'application/json',
-    };
-
-    if (includeAuth) {
-        const token = getAuthToken();
-        if (token) {
-            headers['Authorization'] = `Bearer ${token}`;
-        }
-    }
-
-    return headers;
-}
-
-/**
- * Handle API response and throw error if not ok.
- */
-async function handleResponse<T>(response: Response): Promise<T> {
-    if (!response.ok) {
-        const errorText = await response.text();
-        let errorMessage = 'An error occurred';
-        try {
-            const errorJson = JSON.parse(errorText);
-            errorMessage = errorJson.message || errorJson.error || errorMessage;
-        } catch {
-            errorMessage = errorText || response.statusText;
-        }
-        throw new Error(errorMessage);
-    }
-
-    // Check for empty body (204 No Content or content-length 0)
-    if (response.status === 204) {
-        return undefined as unknown as T;
-    }
-
-    const text = await response.text();
-    if (!text) {
-        return undefined as unknown as T;
-    }
-
+// Helper to extract data and handle errors consistently
+const request = async <T>(promise: Promise<AxiosResponse<T>>): Promise<T> => {
     try {
-        return JSON.parse(text);
-    } catch {
-        // Fallback if not JSON (though usually it should be)
-        return text as unknown as T;
+        const response = await promise;
+        return response.data;
+    } catch (error: any) {
+        // Extract meaningful error message from backend response if available
+        const message = error.response?.data?.message ||
+            error.response?.data?.error ||
+            error.message ||
+            'An error occurred';
+        throw new Error(message);
     }
-}
+};
 
 // ==================== Dashboard Stats API ====================
 
@@ -82,10 +38,7 @@ export interface DashboardStats {
 }
 
 export async function fetchDashboardStats(): Promise<DashboardStats> {
-    const response = await fetch(`${API_BASE_URL}/admin/stats`, {
-        headers: createHeaders(),
-    });
-    return handleResponse<DashboardStats>(response);
+    return request(api.get('/admin/stats'));
 }
 
 // ==================== Financial API ====================
@@ -117,24 +70,15 @@ export interface Payment {
 }
 
 export async function fetchRevenueChart(): Promise<RevenueDataPoint[]> {
-    const response = await fetch(`${API_BASE_URL}/admin/financials/revenue-chart`, {
-        headers: createHeaders(),
-    });
-    return handleResponse<RevenueDataPoint[]>(response);
+    return request(api.get('/admin/financials/revenue-chart'));
 }
 
 export async function fetchSubscriptionStats(): Promise<SubscriptionStats> {
-    const response = await fetch(`${API_BASE_URL}/admin/financials/subscriptions`, {
-        headers: createHeaders(),
-    });
-    return handleResponse<SubscriptionStats>(response);
+    return request(api.get('/admin/financials/subscriptions'));
 }
 
 export async function fetchRecentPayments(limit: number = 10): Promise<Payment[]> {
-    const response = await fetch(`${API_BASE_URL}/admin/financials/payments?limit=${limit}`, {
-        headers: createHeaders(),
-    });
-    return handleResponse<Payment[]>(response);
+    return request(api.get(`/admin/financials/payments`, { params: { limit } }));
 }
 
 export interface FinancialSummary {
@@ -144,10 +88,7 @@ export interface FinancialSummary {
 }
 
 export async function fetchFinancialSummary(): Promise<FinancialSummary> {
-    const response = await fetch(`${API_BASE_URL}/admin/financials/summary`, {
-        headers: createHeaders(),
-    });
-    return handleResponse<FinancialSummary>(response);
+    return request(api.get('/admin/financials/summary'));
 }
 
 // ==================== Investor Verification API ====================
@@ -171,34 +112,19 @@ export interface InvestorStats {
 }
 
 export async function fetchVerificationQueue(): Promise<InvestorVerification[]> {
-    const response = await fetch(`${API_BASE_URL}/admin/investors/queue`, {
-        headers: createHeaders(),
-    });
-    return handleResponse<InvestorVerification[]>(response);
+    return request(api.get('/admin/investors/queue'));
 }
 
 export async function fetchInvestorStats(): Promise<InvestorStats> {
-    const response = await fetch(`${API_BASE_URL}/admin/investors/stats`, {
-        headers: createHeaders(),
-    });
-    return handleResponse<InvestorStats>(response);
+    return request(api.get('/admin/investors/stats'));
 }
 
 export async function approveInvestorForPayment(id: string): Promise<{ message: string }> {
-    const response = await fetch(`${API_BASE_URL}/admin/investors/${id}/approve-verification`, {
-        method: 'POST',
-        headers: createHeaders(),
-    });
-    return handleResponse<{ message: string }>(response);
+    return request(api.post(`/admin/investors/${id}/approve-verification`));
 }
 
 export async function rejectInvestorVerification(id: string, reason?: string): Promise<{ message: string }> {
-    const response = await fetch(`${API_BASE_URL}/admin/investors/${id}/reject-verification`, {
-        method: 'POST',
-        headers: createHeaders(),
-        body: JSON.stringify({ reason }),
-    });
-    return handleResponse<{ message: string }>(response);
+    return request(api.post(`/admin/investors/${id}/reject-verification`, { reason }));
 }
 
 // ==================== App Config API ====================
@@ -218,42 +144,23 @@ export interface PublicConfig {
 }
 
 export async function fetchAllConfigs(): Promise<AppConfigItem[]> {
-    const response = await fetch(`${API_BASE_URL}/admin/config`, {
-        headers: createHeaders(),
-    });
-    return handleResponse<AppConfigItem[]>(response);
+    return request(api.get('/admin/config'));
 }
 
 export async function fetchConfigsGrouped(): Promise<Record<string, AppConfigItem[]>> {
-    const response = await fetch(`${API_BASE_URL}/admin/config/grouped`, {
-        headers: createHeaders(),
-    });
-    return handleResponse<Record<string, AppConfigItem[]>>(response);
+    return request(api.get('/admin/config/grouped'));
 }
 
 export async function updateConfig(key: string, value: string): Promise<AppConfigItem> {
-    const response = await fetch(`${API_BASE_URL}/admin/config/${key}`, {
-        method: 'PUT',
-        headers: createHeaders(),
-        body: JSON.stringify({ value }),
-    });
-    return handleResponse<AppConfigItem>(response);
+    return request(api.put(`/admin/config/${key}`, { value }));
 }
 
 export async function batchUpdateConfigs(updates: Record<string, string>): Promise<{ version: number }> {
-    const response = await fetch(`${API_BASE_URL}/admin/config`, {
-        method: 'PUT',
-        headers: createHeaders(),
-        body: JSON.stringify(updates),
-    });
-    return handleResponse<{ version: number }>(response);
+    return request(api.put('/admin/config', updates));
 }
 
 export async function fetchConfigVersion(): Promise<{ version: number }> {
-    const response = await fetch(`${API_BASE_URL}/admin/config/version`, {
-        headers: createHeaders(),
-    });
-    return handleResponse<{ version: number }>(response);
+    return request(api.get('/admin/config/version'));
 }
 
 // ==================== Startup Management API ====================
@@ -267,6 +174,8 @@ export interface StartupFilterParams {
     industryNegate?: boolean;
     ownerEmail?: string;
     ownerEmailNegate?: boolean;
+    memberEmail?: string;
+    memberEmailNegate?: boolean;
     stage?: string;
     stageNegate?: boolean;
     status?: string;
@@ -307,44 +216,29 @@ export async function fetchAllStartups(
         }
     });
 
-    const response = await fetch(`${API_BASE_URL}/admin/startups/all?${params}`, {
-        headers: createHeaders(),
-    });
-    return handleResponse(response);
+    return request(api.get('/admin/startups/all', { params }));
 }
 
 export async function transferStartupOwnership(startupId: string, newOwnerId: string): Promise<Startup> {
-    const response = await fetch(`${API_BASE_URL}/startups/${startupId}/transfer-ownership`, {
-        method: 'PUT',
-        headers: createHeaders(),
-        body: JSON.stringify({ newOwnerId }),
-    });
-    return handleResponse<Startup>(response);
+    return request(api.put(`/startups/${startupId}/transfer-ownership`, { newOwnerId }));
 }
 
 // StartupStats interface imported from types
 
 export async function fetchStartupStats(): Promise<StartupStats> {
-    const response = await fetch(`${API_BASE_URL}/admin/startups/stats-overview`, {
-        headers: createHeaders(),
-    });
-    return handleResponse<StartupStats>(response);
+    return request(api.get('/admin/startups/stats-overview'));
 }
 
 export async function createStartup(data: Partial<Startup>): Promise<Startup> {
-    const response = await fetch(`${API_BASE_URL}/startups`, {
-        method: 'POST',
-        headers: createHeaders(),
-        body: JSON.stringify(data),
-    });
-    return handleResponse<Startup>(response);
+    return request(api.post('/startups', data));
 }
 
 export async function getStartupById(id: string): Promise<Startup> {
-    const response = await fetch(`${API_BASE_URL}/startups/${id}`, {
-        headers: createHeaders(),
-    });
-    return handleResponse<Startup>(response);
+    return request(api.get(`/startups/${id}`));
+}
+
+export async function deleteStartup(id: string): Promise<void> {
+    return request(api.delete(`/admin/startups/${id}`));
 }
 
 // ==================== User API ====================
@@ -352,85 +246,49 @@ export async function getStartupById(id: string): Promise<Startup> {
 // User interface imported from types
 
 export async function searchUsers(query: string, role?: string, roleNegate?: boolean): Promise<{ content: User[] }> {
-    let url = `${API_BASE_URL}/admin/users?query=${encodeURIComponent(query)}&size=10`;
-    if (role) {
-        url += `&role=${encodeURIComponent(role)}`;
-    }
-    if (roleNegate) {
-        url += `&roleNegate=true`;
-    }
-    const response = await fetch(url, {
-        headers: createHeaders(),
-    });
-    return handleResponse(response);
+    const params: any = {
+        query,
+        size: 10
+    };
+    if (role) params.role = role;
+    if (roleNegate) params.roleNegate = true;
+
+    return request(api.get('/admin/users', { params }));
 }
 
 export async function updatePreferredCurrency(currency: string): Promise<void> {
-    const response = await fetch(`${API_BASE_URL}/users/me/preferred-currency`, {
-        method: 'PUT',
-        headers: createHeaders(),
-        body: JSON.stringify({ currency }),
-    });
-    return handleResponse<void>(response);
+    return request(api.put('/users/me/preferred-currency', { currency }));
 }
 
 export async function syncExchangeRates(): Promise<Record<string, string>> {
-    const response = await fetch(`${API_BASE_URL}/admin/config/sync-rates`, {
-        method: 'POST',
-        headers: createHeaders(),
-    });
-    return handleResponse<Record<string, string>>(response);
+    return request(api.post('/admin/config/sync-rates'));
 }
 
 // ==================== Startup Team API ====================
 
 export async function addStartupMember(startupId: string, userId: string, role: string, joinedAt: string, leftAt: string | null): Promise<Startup> {
-    const response = await fetch(`${API_BASE_URL}/startups/${startupId}/members`, {
-        method: 'POST',
-        headers: createHeaders(),
-        body: JSON.stringify({ userId, role, joinedAt, leftAt }),
-    })
-    return handleResponse<Startup>(response)
+    return request(api.post(`/startups/${startupId}/members`, { userId, role, joinedAt, leftAt }));
 }
 
 // Reuse existing search functionality via getAllStartups if needed, or add specialized search
 export async function searchStartups(query: string): Promise<{ content: Startup[] }> {
-    const response = await fetch(`${API_BASE_URL}/admin/startups/all?query=${encodeURIComponent(query)}&size=10`, {
-        headers: createHeaders(),
-    })
-    return handleResponse<{ content: Startup[] }>(response)
+    return request(api.get('/admin/startups/all', { params: { query, size: 10 } }));
 }
 
 export async function leaveStartup(startupId: string): Promise<void> {
-    const response = await fetch(`${API_BASE_URL}/startups/${startupId}/leave`, {
-        method: 'POST',
-        headers: createHeaders(),
-    })
-    return handleResponse<void>(response)
+    return request(api.post(`/startups/${startupId}/leave`));
 }
 
 export async function unsignStartup(startupId: string): Promise<void> {
-    const response = await fetch(`${API_BASE_URL}/startups/${startupId}/members/me`, {
-        method: 'DELETE',
-        headers: createHeaders(),
-    })
-    return handleResponse<void>(response)
+    return request(api.delete(`/startups/${startupId}/members/me`));
 }
 
 export async function removeStartupMember(startupId: string, userId: string): Promise<void> {
-    const response = await fetch(`${API_BASE_URL}/startups/${startupId}/members/${userId}/remove`, {
-        method: 'POST',
-        headers: createHeaders(),
-    })
-    return handleResponse<void>(response)
+    return request(api.post(`/startups/${startupId}/members/${userId}/remove`));
 }
 
 export async function unsignStartupMember(startupId: string, userId: string): Promise<void> {
-    const response = await fetch(`${API_BASE_URL}/startups/${startupId}/members/${userId}`, {
-        method: 'DELETE',
-        headers: createHeaders(),
-    })
-    return handleResponse<void>(response)
+    return request(api.delete(`/startups/${startupId}/members/${userId}`));
 }
 
 // ==================== Security API ====================
@@ -445,8 +303,5 @@ export interface SecurityStats {
 }
 
 export async function fetchSecurityStats(): Promise<SecurityStats> {
-    const response = await fetch(`${API_BASE_URL}/admin/security/stats`, {
-        headers: createHeaders(),
-    });
-    return handleResponse<SecurityStats>(response);
+    return request(api.get('/admin/security/stats'));
 }
