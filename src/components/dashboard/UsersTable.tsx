@@ -11,11 +11,19 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { Input } from '../../components/ui/input'
 import { Button } from '../../components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select'
-import { formatDate } from '../../lib/utils'
+import { formatDate, formatTimeAgo } from '../../lib/utils'
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from '../../components/ui/dropdown-menu'
 import {
     Building2, TrendingUp, User as UserIcon, Loader2, ChevronLeft,
     ChevronRight, ChevronsLeft, ChevronsRight, Search, Eye, Ban,
-    AlertTriangle, Trash2, Shield, Clock, Download, RotateCcw, UserPlus
+    AlertTriangle, Trash2, Shield, Clock, Download, RotateCcw, UserPlus, MoreVertical, Calendar
 } from 'lucide-react'
 import { toast } from 'sonner'
 import api from '../../lib/axios'
@@ -480,25 +488,23 @@ export function UsersTable() {
                 },
             },
             {
-                accessorKey: 'lastLoginAt',
-                header: 'Last Login',
+                id: 'activity',
+                header: 'Activity',
                 cell: ({ row }) => {
-                    const lastLogin = row.original.lastLoginAt
+                    const user = row.original
                     return (
-                        <span className="text-sm text-muted-foreground">
-                            {lastLogin ? formatDate(lastLogin) : 'Never'}
-                        </span>
+                        <div className="flex flex-col gap-1 text-xs text-muted-foreground">
+                            <div className="flex items-center gap-1.5" title={`Joined: ${formatDate(user.createdAt)}`}>
+                                <Calendar className="h-3 w-3" />
+                                <span>Joined {formatTimeAgo(user.createdAt)}</span>
+                            </div>
+                            <div className="flex items-center gap-1.5" title={`Last Login: ${user.lastLoginAt ? formatDate(user.lastLoginAt) : 'Never'}`}>
+                                <Clock className="h-3 w-3" />
+                                <span>Active {formatTimeAgo(user.lastLoginAt)}</span>
+                            </div>
+                        </div>
                     )
                 },
-            },
-            {
-                accessorKey: 'createdAt',
-                header: 'Joined',
-                cell: info => (
-                    <span className="text-sm text-muted-foreground">
-                        {formatDate(info.getValue() as string)}
-                    </span>
-                ),
             },
             {
                 id: 'actions',
@@ -521,69 +527,76 @@ export function UsersTable() {
                     })()
 
                     return (
-                        <div className="flex items-center gap-1">
+
+                        <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
                             <Button
                                 variant="ghost"
-                                size="sm"
+                                size="icon"
+                                className="h-8 w-8 hover:bg-muted"
                                 onClick={() => handleViewDetails(user.id)}
                                 title="View Details"
                             >
-                                <Eye className="h-4 w-4" />
+                                <Eye className="h-4 w-4 text-blue-500" />
                             </Button>
-                            {canManage && (
-                                <>
+
+
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
                                     <Button
                                         variant="ghost"
-                                        size="sm"
-                                        onClick={() => handleStatusChange(user.id)}
-                                        title="Change Status"
-                                        className="text-blue-500 hover:text-blue-600 hover:bg-blue-500/10"
+                                        size="icon"
+                                        className="h-8 w-8 p-0"
+                                        disabled={!canManage}
                                     >
-                                        <Shield className="h-4 w-4" />
+                                        <span className="sr-only">Open menu</span>
+                                        <MoreVertical className="h-4 w-4" />
                                     </Button>
-                                    <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        onClick={() => handleWarn(user.id)}
-                                        title="Issue Warning"
-                                        className="text-yellow-500 hover:text-yellow-600 hover:bg-yellow-500/10"
-                                    >
-                                        <AlertTriangle className="h-4 w-4" />
-                                    </Button>
-                                    <Button
-                                        variant="ghost"
-                                        size="sm"
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                    <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                    <DropdownMenuSeparator />
+
+                                    <DropdownMenuItem onClick={() => handleStatusChange(user.id)}>
+                                        <Shield className="mr-2 h-4 w-4 text-blue-500" />
+                                        Change Status
+                                    </DropdownMenuItem>
+
+                                    <DropdownMenuItem onClick={() => handleWarn(user.id)}>
+                                        <AlertTriangle className="mr-2 h-4 w-4 text-yellow-500" />
+                                        Issue Warning
+                                    </DropdownMenuItem>
+
+                                    <DropdownMenuItem
                                         onClick={() => handleSuspend(user.id)}
-                                        title={isSuspended ? "Already Suspended" : "Suspend User"}
-                                        className="text-orange-500 hover:text-orange-600 hover:bg-orange-500/10"
                                         disabled={isSuspended}
+                                        className="text-orange-500 focus:text-orange-500"
                                     >
-                                        <Ban className="h-4 w-4" />
-                                    </Button>
-                                    <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        onClick={() => handleDelete(user.id)}
-                                        title="Delete User"
-                                        className="text-red-500 hover:text-red-600 hover:bg-red-500/10"
-                                    >
-                                        <Trash2 className="h-4 w-4" />
-                                    </Button>
+                                        <Ban className="mr-2 h-4 w-4" />
+                                        {isSuspended ? "Already Suspended" : "Suspend User"}
+                                    </DropdownMenuItem>
+
                                     {user.status === 'DELETED' && (
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            onClick={() => handleRestore(user.id)}
-                                            title="Restore User"
-                                            className="text-green-500 hover:text-green-600 hover:bg-green-500/10"
-                                        >
-                                            <RotateCcw className="h-4 w-4" />
-                                        </Button>
+                                        <DropdownMenuItem onClick={() => handleRestore(user.id)}>
+                                            <RotateCcw className="mr-2 h-4 w-4 text-green-500" />
+                                            Restore User
+                                        </DropdownMenuItem>
                                     )}
-                                </>
-                            )}
+
+                                    <DropdownMenuSeparator />
+
+                                    <DropdownMenuItem
+                                        onClick={() => handleDelete(user.id)}
+                                        className="text-red-600 focus:text-red-600"
+                                    >
+                                        <Trash2 className="mr-2 h-4 w-4" />
+                                        Delete User
+                                    </DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+
                         </div>
                     )
+
                 },
             },
         ],
@@ -787,7 +800,11 @@ export function UsersTable() {
                                     ))
                                 ) : table.getRowModel().rows.length > 0 ? (
                                     table.getRowModel().rows.map(row => (
-                                        <TableRow key={row.id} className="hover:bg-muted/50">
+                                        <TableRow
+                                            key={row.id}
+                                            className="hover:bg-muted/50 cursor-pointer"
+                                            onClick={() => handleViewDetails(row.original.id)}
+                                        >
                                             {row.getVisibleCells().map(cell => (
                                                 <TableCell key={cell.id}>
                                                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
@@ -809,7 +826,7 @@ export function UsersTable() {
                     {/* Pagination Controls */}
                     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 px-2 py-4">
                         <div className="text-sm text-muted-foreground">
-                            Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount() || 1}
+                            Showing {table.getState().pagination.pageIndex * table.getState().pagination.pageSize + 1} to {Math.min((table.getState().pagination.pageIndex + 1) * table.getState().pagination.pageSize, totalUsers)} of {totalUsers} entries
                         </div>
                         <div className="flex flex-wrap items-center gap-4 lg:gap-6">
                             <div className="flex items-center space-x-2">

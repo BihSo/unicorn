@@ -11,7 +11,7 @@ import {
     CheckCircle2,
     Clock,
     XCircle,
-    DollarSign,
+
     Search,
     Download,
     UserPlus,
@@ -19,6 +19,7 @@ import {
     ChevronsRight,
     ChevronLeft,
     ChevronRight,
+    Calendar,
 } from "lucide-react"
 import { toast } from "sonner"
 
@@ -72,7 +73,7 @@ import {
     getStartupById
 } from '../lib/api'
 import { Startup, StartupStats, User } from '../types'
-import { formatCurrency, formatDate, formatNumber } from '../lib/utils'
+import { cn, formatDate, formatTimeAgo, formatNumber } from '../lib/utils'
 import { KPICard } from '../components/dashboard/KPICard'
 
 import {
@@ -522,7 +523,11 @@ export function StartupRequests() {
                                 </TableHeader>
                                 <TableBody>
                                     {startups.map((startup) => (
-                                        <TableRow key={startup.id}>
+                                        <TableRow
+                                            key={startup.id}
+                                            className="group cursor-pointer hover:bg-muted/50 transition-colors"
+                                            onClick={() => setViewDialog({ open: true, startup })}
+                                        >
                                             <TableCell>
                                                 <div className="flex items-center gap-3">
                                                     {startup.logoUrl ? (
@@ -562,7 +567,7 @@ export function StartupRequests() {
                                                 </div>
                                             </TableCell>
                                             <TableCell>
-                                                <Badge variant="outline" className="font-normal">
+                                                <Badge variant="outline" className={cn("font-normal", getIndustryStyle(startup.industry))}>
                                                     {startup.industry || 'General'}
                                                 </Badge>
                                             </TableCell>
@@ -570,72 +575,88 @@ export function StartupRequests() {
                                                 {getStageBadge(startup.stage)}
                                             </TableCell>
                                             <TableCell>
-                                                <div className="flex items-center gap-1 font-medium">
-                                                    <DollarSign className="h-3 w-3 text-muted-foreground" />
-                                                    {formatCurrency(startup.fundingGoal || 0)}
+                                                <div className="font-medium">
+                                                    {(startup.fundingGoal || 0).toLocaleString('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                                                 </div>
                                             </TableCell>
                                             <TableCell>
                                                 {getStatusBadge(startup.status)}
                                             </TableCell>
                                             <TableCell className="text-muted-foreground text-xs">
-                                                {formatDate(startup.createdAt)}
+                                                <div className="flex items-center gap-1.5" title={formatDate(startup.createdAt)}>
+                                                    <Calendar className="h-3 w-3" />
+                                                    <span>Created {formatTimeAgo(startup.createdAt)}</span>
+                                                </div>
                                             </TableCell>
                                             <TableCell className="text-right">
-                                                <DropdownMenu>
-                                                    <DropdownMenuTrigger asChild>
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="icon"
-                                                            className="h-8 w-8 p-0"
-                                                        >
-                                                            <span className="sr-only">Open menu</span>
-                                                            <MoreVertical className="h-4 w-4" />
-                                                        </Button>
-                                                    </DropdownMenuTrigger>
-                                                    <DropdownMenuContent align="end">
-                                                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                                        <DropdownMenuItem onClick={() => setViewDialog({ open: true, startup })}>
-                                                            <Eye className="mr-2 h-4 w-4" />
-                                                            View Details
-                                                        </DropdownMenuItem>
-                                                        <DropdownMenuItem onClick={() => setTransferDialog({ open: true, startup })}>
-                                                            <UserCog className="mr-2 h-4 w-4" />
-                                                            Transfer Ownership
-                                                        </DropdownMenuItem>
-                                                        {startup.websiteUrl && (
-                                                            <DropdownMenuItem asChild>
-                                                                <a href={startup.websiteUrl} target="_blank" rel="noopener noreferrer">
-                                                                    <Globe className="mr-2 h-4 w-4" />
-                                                                    Visit Website
-                                                                </a>
+                                                <div className="flex items-center justify-end gap-1">
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="h-8 w-8 hover:bg-muted"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation()
+                                                            setViewDialog({ open: true, startup })
+                                                        }}
+                                                        title="View Details"
+                                                    >
+                                                        <Eye className="h-4 w-4 text-blue-500" />
+                                                    </Button>
+                                                    <DropdownMenu>
+                                                        <DropdownMenuTrigger asChild>
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                className="h-8 w-8 p-0"
+                                                                onClick={(e) => e.stopPropagation()}
+                                                            >
+                                                                <span className="sr-only">Open menu</span>
+                                                                <MoreVertical className="h-4 w-4" />
+                                                            </Button>
+                                                        </DropdownMenuTrigger>
+                                                        <DropdownMenuContent align="end">
+                                                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                                            <DropdownMenuItem onClick={() => setViewDialog({ open: true, startup })}>
+                                                                <Eye className="mr-2 h-4 w-4" />
+                                                                View Details
                                                             </DropdownMenuItem>
-                                                        )}
+                                                            <DropdownMenuItem onClick={() => setTransferDialog({ open: true, startup })}>
+                                                                <UserCog className="mr-2 h-4 w-4" />
+                                                                Transfer Ownership
+                                                            </DropdownMenuItem>
+                                                            {startup.websiteUrl && (
+                                                                <DropdownMenuItem asChild>
+                                                                    <a href={startup.websiteUrl} target="_blank" rel="noopener noreferrer">
+                                                                        <Globe className="mr-2 h-4 w-4" />
+                                                                        Visit Website
+                                                                    </a>
+                                                                </DropdownMenuItem>
+                                                            )}
 
-                                                        {isAdmin && (
-                                                            <>
-                                                                <DropdownMenuSeparator />
-                                                                <DropdownMenuLabel>Moderation</DropdownMenuLabel>
-                                                                <DropdownMenuItem onClick={(e) => handleStatusChange(e, startup)}>
-                                                                    <Shield className="mr-2 h-4 w-4 text-blue-500" />
-                                                                    Change Status
-                                                                </DropdownMenuItem>
-                                                                <DropdownMenuItem onClick={(e) => handleWarn(e, startup)}>
-                                                                    <AlertTriangle className="mr-2 h-4 w-4 text-yellow-500" />
-                                                                    Issue Warning
-                                                                </DropdownMenuItem>
-                                                                <DropdownMenuSeparator />
-                                                                <DropdownMenuItem
-                                                                    onClick={(e) => handleDelete(e, startup)}
-                                                                    className="text-red-600 focus:text-red-600"
-                                                                >
-                                                                    <Trash2 className="mr-2 h-4 w-4" />
-                                                                    Delete Permanently
-                                                                </DropdownMenuItem>
-                                                            </>
-                                                        )}
-                                                    </DropdownMenuContent>
-                                                </DropdownMenu>
+
+                                                            <DropdownMenuSeparator />
+                                                            <DropdownMenuLabel>Moderation</DropdownMenuLabel>
+                                                            <DropdownMenuItem onClick={(e) => handleStatusChange(e, startup)} disabled={!isAdmin}>
+                                                                <Shield className="mr-2 h-4 w-4 text-blue-500" />
+                                                                Change Status
+                                                            </DropdownMenuItem>
+                                                            <DropdownMenuItem onClick={(e) => handleWarn(e, startup)} disabled={!isAdmin}>
+                                                                <AlertTriangle className="mr-2 h-4 w-4 text-yellow-500" />
+                                                                Issue Warning
+                                                            </DropdownMenuItem>
+                                                            <DropdownMenuSeparator />
+                                                            <DropdownMenuItem
+                                                                onClick={(e) => handleDelete(e, startup)}
+                                                                disabled={!isAdmin}
+                                                                className="text-red-600 focus:text-red-600"
+                                                            >
+                                                                <Trash2 className="mr-2 h-4 w-4" />
+                                                                Delete Permanently
+                                                            </DropdownMenuItem>
+
+                                                        </DropdownMenuContent>
+                                                    </DropdownMenu>
+                                                </div>
                                             </TableCell>
                                         </TableRow>
                                     ))}
@@ -711,12 +732,12 @@ export function StartupRequests() {
                             </div>
                         </div>
                     </div>
-                </CardContent>
-            </Card>
+                </CardContent >
+            </Card >
 
             {/* View Startup Dialog */}
 
-            <StartupDetailsDialog
+            < StartupDetailsDialog
                 open={viewDialog.open}
                 onOpenChange={(open) => setViewDialog(prev => ({ ...prev, open }))}
                 startup={viewDialog.startup}
@@ -921,28 +942,54 @@ export function StartupRequests() {
             />
 
             {/* Moderation Dialogs */}
-            {actionStartup && (
-                <>
-                    <WarnStartupDialog
-                        open={warnDialogOpen}
-                        onOpenChange={setWarnDialogOpen}
-                        startup={actionStartup}
-                        onSuccess={handleActionComplete}
-                    />
-                    <StartupStatusDialog
-                        open={statusDialogOpen}
-                        onOpenChange={setStatusDialogOpen}
-                        startup={actionStartup}
-                        onSuccess={handleActionComplete}
-                    />
-                    <DeleteStartupDialog
-                        open={deleteDialogOpen}
-                        onOpenChange={setDeleteDialogOpen}
-                        startup={actionStartup}
-                        onSuccess={handleActionComplete}
-                    />
-                </>
-            )}
+            {
+                actionStartup && (
+                    <>
+                        <WarnStartupDialog
+                            open={warnDialogOpen}
+                            onOpenChange={setWarnDialogOpen}
+                            startup={actionStartup}
+                            onSuccess={handleActionComplete}
+                        />
+                        <StartupStatusDialog
+                            open={statusDialogOpen}
+                            onOpenChange={setStatusDialogOpen}
+                            startup={actionStartup}
+                            onSuccess={handleActionComplete}
+                        />
+                        <DeleteStartupDialog
+                            open={deleteDialogOpen}
+                            onOpenChange={setDeleteDialogOpen}
+                            startup={actionStartup}
+                            onSuccess={handleActionComplete}
+                        />
+                    </>
+                )
+            }
         </div >
     )
+}
+
+function getIndustryStyle(industry: string | undefined | null) {
+    const ind = (industry || 'General').toLowerCase()
+
+    if (ind.includes('fin') || ind.includes('bank') || ind.includes('invest'))
+        return "bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-800"
+
+    if (ind.includes('health') || ind.includes('med') || ind.includes('bio'))
+        return "bg-rose-100 text-rose-800 border-rose-200 dark:bg-rose-900/30 dark:text-rose-300 dark:border-rose-800"
+
+    if (ind.includes('ed') || ind.includes('learn') || ind.includes('school'))
+        return "bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-800"
+
+    if (ind.includes('tech') || ind.includes('soft') || ind.includes('app') || ind.includes('saas') || ind.includes('ai'))
+        return "bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800"
+
+    if (ind.includes('comm') || ind.includes('retail') || ind.includes('market') || ind.includes('shop'))
+        return "bg-purple-100 text-purple-800 border-purple-200 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-800"
+
+    if (ind.includes('green') || ind.includes('env') || ind.includes('sus'))
+        return "bg-lime-100 text-lime-800 border-lime-200 dark:bg-lime-900/30 dark:text-lime-300 dark:border-lime-800"
+
+    return "bg-slate-100 text-slate-800 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700"
 }

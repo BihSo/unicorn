@@ -32,6 +32,13 @@ import {
     AlertDialogTitle,
 } from '../ui/alert-dialog'
 
+import { RotateCcw } from 'lucide-react'
+import { SuspendUserDialog } from './SuspendUserDialog'
+import { WarnUserDialog } from './WarnUserDialog'
+import { DeleteUserDialog } from './DeleteUserDialog'
+import { RestoreUserDialog } from './RestoreUserDialog'
+import { UserStatusDialog } from './UserStatusDialog'
+
 interface UserDetailsModalProps {
     userId: string | null
     open: boolean
@@ -126,14 +133,17 @@ export function UserDetailsModal({ userId, open, onOpenChange, onAction }: UserD
     const [deleteLogId, setDeleteLogId] = useState<string | null>(null)
     const [showDeleteDialog, setShowDeleteDialog] = useState(false)
 
+    // Action Dialog States
+    const [suspendDialogOpen, setSuspendDialogOpen] = useState(false)
+    const [warnDialogOpen, setWarnDialogOpen] = useState(false)
+    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+    const [restoreDialogOpen, setRestoreDialogOpen] = useState(false)
+    const [statusChangeDialogOpen, setStatusChangeDialogOpen] = useState(false)
+
     const { user: currentUser } = useAuth()
     const isSuperAdmin = currentUser?.role === 'SUPER_ADMIN'
 
-    const canManageUser = userDetails ? (
-        userDetails.role === 'SUPER_ADMIN' ? false :
-            userDetails.role === 'ADMIN' ? isSuperAdmin :
-                true
-    ) : false
+
 
     useEffect(() => {
         if (open && userId) {
@@ -159,6 +169,11 @@ export function UserDetailsModal({ userId, open, onOpenChange, onAction }: UserD
         } finally {
             setLoading(false)
         }
+    }
+
+    const handleActionComplete = () => {
+        fetchUserDetails()
+        if (onAction) onAction()
     }
 
     async function handleUnsuspend() {
@@ -262,86 +277,180 @@ export function UserDetailsModal({ userId, open, onOpenChange, onAction }: UserD
         { id: 'security', label: 'Security', icon: Shield },
     ]
 
-    return (
-        <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
-                <DialogHeader>
-                    <DialogTitle>User Details</DialogTitle>
-                </DialogHeader>
+    const canManageUser = userDetails ? (
+        userDetails.role === 'SUPER_ADMIN' ? false :
+            userDetails.role === 'ADMIN' ? isSuperAdmin :
+                true
+    ) : false
+    const isSuspended = userDetails?.status === 'SUSPENDED' || userDetails?.status === 'BANNED'
 
-                {loading ? (
-                    <div className="flex items-center justify-center py-12">
-                        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                    </div>
-                ) : !userDetails ? (
-                    <div className="text-center py-8 text-muted-foreground">
-                        User not found
-                    </div>
-                ) : (
-                    <div className="flex flex-col flex-1 overflow-hidden">
-                        {/* Header with basic info */}
-                        <div className="flex items-start justify-between p-4 bg-muted/30 rounded-lg mb-4">
-                            <div className="flex items-center gap-4">
-                                {/* Avatar with status indicator */}
-                                <div className="relative">
-                                    <img
-                                        src={userDetails.avatarUrl || "/avatars/avatar_1.png"}
-                                        alt={userDetails.email}
-                                        className="h-16 w-16 rounded-full border-2 border-primary/20"
-                                    />
-                                    <div className={`absolute -bottom-0.5 -right-0.5 h-4 w-4 rounded-full border-2 border-background ring-1 ring-background ${userDetails.hasActiveSession ? 'bg-green-500' : 'bg-gray-300'
-                                        }`} title={userDetails.hasActiveSession ? "Online" : "Offline"} />
-                                </div>
-                                <div>
-                                    <h3 className="text-lg font-bold">
-                                        {userDetails.firstName ? `${userDetails.firstName} ${userDetails.lastName}` : userDetails.email.split('@')[0]}
-                                    </h3>
-                                    <p className="text-sm text-muted-foreground">{userDetails.email}</p>
-                                    <div className="flex items-center gap-2 mt-1">
-                                        {getRoleBadge(userDetails.role)}
-                                        {getStatusBadge(userDetails.status)}
-                                        {/* Plan for Non-Investors/Non-Admins, Verification for Investors */}
-                                        {userDetails.role === 'INVESTOR' ? (
-                                            userDetails.investorInfo?.isVerified ? (
-                                                <Badge className="bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 border-emerald-200">
-                                                    <CheckCircle className="h-3 w-3 mr-1" />
-                                                    Verified Investor
+    return (
+        <>
+            <Dialog open={open} onOpenChange={onOpenChange}>
+                <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
+                    <DialogHeader className="flex-row items-center justify-between space-y-0 pb-4 pr-6">
+                        <DialogTitle>User Details</DialogTitle>
+                        {userDetails && (
+                            <div className="flex items-center gap-2">
+                                <Button
+                                    variant="outline"
+                                    size="icon"
+                                    className="h-8 w-8 text-blue-500 hover:text-blue-600 hover:bg-blue-500/10"
+                                    onClick={() => setStatusChangeDialogOpen(true)}
+                                    title="Change Status"
+                                    disabled={!canManageUser}
+                                >
+                                    <Shield className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                    variant="outline"
+                                    size="icon"
+                                    className="h-8 w-8 text-yellow-500 hover:text-yellow-600 hover:bg-yellow-500/10"
+                                    onClick={() => setWarnDialogOpen(true)}
+                                    title="Issue Warning"
+                                    disabled={!canManageUser}
+                                >
+                                    <AlertTriangle className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                    variant="outline"
+                                    size="icon"
+                                    className="h-8 w-8 text-orange-500 hover:text-orange-600 hover:bg-orange-500/10"
+                                    onClick={() => setSuspendDialogOpen(true)}
+                                    disabled={!canManageUser || isSuspended}
+                                    title={isSuspended ? 'Already Suspended' : 'Suspend User'}
+                                >
+                                    <Ban className="h-4 w-4" />
+                                </Button>
+                                {userDetails.status === 'DELETED' ? (
+                                    <Button
+                                        variant="outline"
+                                        size="icon"
+                                        className="h-8 w-8 text-green-600 hover:text-green-700 hover:bg-green-500/10"
+                                        onClick={() => setRestoreDialogOpen(true)}
+                                        title="Restore User"
+                                        disabled={!canManageUser}
+                                    >
+                                        <RotateCcw className="h-4 w-4" />
+                                    </Button>
+                                ) : (
+                                    <Button
+                                        variant="outline"
+                                        size="icon"
+                                        className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-500/10"
+                                        onClick={() => setDeleteDialogOpen(true)}
+                                        title="Delete User"
+                                        disabled={!canManageUser}
+                                    >
+                                        <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                )}
+                            </div>
+                        )}
+                    </DialogHeader>
+
+                    {loading ? (
+                        <div className="flex items-center justify-center py-12">
+                            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                        </div>
+                    ) : !userDetails ? (
+                        <div className="text-center py-8 text-muted-foreground">
+                            User not found
+                        </div>
+                    ) : (
+                        <div className="flex flex-col flex-1 overflow-y-auto">
+                            {/* Header with basic info */}
+                            <div className="flex items-start justify-between p-4 bg-muted/30 rounded-lg mb-4">
+                                <div className="flex items-center gap-4">
+                                    {/* Avatar with status indicator */}
+                                    <div className="relative">
+                                        <img
+                                            src={userDetails.avatarUrl || "/avatars/avatar_1.png"}
+                                            alt={userDetails.email}
+                                            className="h-16 w-16 rounded-full border-2 border-primary/20"
+                                        />
+                                        <div className={`absolute -bottom-0.5 -right-0.5 h-4 w-4 rounded-full border-2 border-background ring-1 ring-background ${userDetails.hasActiveSession ? 'bg-green-500' : 'bg-gray-300'
+                                            }`} title={userDetails.hasActiveSession ? "Online" : "Offline"} />
+                                    </div>
+                                    <div>
+                                        <h3 className="text-lg font-bold">
+                                            {userDetails.firstName ? `${userDetails.firstName} ${userDetails.lastName}` : userDetails.email.split('@')[0]}
+                                        </h3>
+                                        <p className="text-sm text-muted-foreground">{userDetails.email}</p>
+                                        <div className="flex items-center gap-2 mt-0.5">
+                                            <code className="text-xs bg-muted px-2 py-0.5 rounded font-mono text-muted-foreground">
+                                                {userDetails.id}
+                                            </code>
+                                            <button
+                                                onClick={() => {
+                                                    navigator.clipboard.writeText(userDetails.id);
+                                                    toast.success('User ID copied to clipboard!');
+                                                }}
+                                                className="text-xs text-primary hover:text-primary/80 transition-colors"
+                                                title="Copy User ID"
+                                            >
+                                                📋
+                                            </button>
+                                        </div>
+                                        <div className="flex items-center gap-2 mt-1">
+                                            {getRoleBadge(userDetails.role)}
+                                            {getStatusBadge(userDetails.status)}
+                                            {/* Plan for Non-Investors/Non-Admins, Verification for Investors */}
+                                            {userDetails.role === 'INVESTOR' ? (
+                                                userDetails.investorInfo?.isVerified ? (
+                                                    <Badge className="bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 border-emerald-200">
+                                                        <CheckCircle className="h-3 w-3 mr-1" />
+                                                        Verified Investor
+                                                    </Badge>
+                                                ) : (
+                                                    <Badge variant="outline" className="text-muted-foreground border-dashed">
+                                                        Not Verified
+                                                    </Badge>
+                                                )
+                                            ) : userDetails.role === 'ADMIN' ? (
+                                                <Badge className="bg-purple-500/10 text-purple-600 hover:bg-purple-500/20 border-purple-200">
+                                                    <Shield className="h-3 w-3 mr-1" />
+                                                    Super Admin
                                                 </Badge>
                                             ) : (
-                                                <Badge variant="outline" className="text-muted-foreground border-dashed">
-                                                    Not Verified
-                                                </Badge>
-                                            )
-                                        ) : userDetails.role === 'ADMIN' ? (
-                                            <Badge className="bg-purple-500/10 text-purple-600 hover:bg-purple-500/20 border-purple-200">
-                                                <Shield className="h-3 w-3 mr-1" />
-                                                Super Admin
-                                            </Badge>
-                                        ) : (
-                                            getPlanBadge(userDetails.currentSubscription?.plan || 'FREE')
-                                        )}
+                                                getPlanBadge(userDetails.currentSubscription?.plan || 'FREE')
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
+                                {(userDetails.status === 'SUSPENDED' || userDetails.status === 'BANNED') && canManageUser && (
+                                    <Button variant="outline" onClick={handleUnsuspend} size="sm">
+                                        <CheckCircle className="h-4 w-4 mr-2" />
+                                        Unsuspend
+                                    </Button>
+                                )}
                             </div>
-                            {(userDetails.status === 'SUSPENDED' || userDetails.status === 'BANNED') && canManageUser && (
-                                <Button variant="outline" onClick={handleUnsuspend} size="sm">
-                                    <CheckCircle className="h-4 w-4 mr-2" />
-                                    Unsuspend
-                                </Button>
-                            )}
-                        </div>
 
-                        {/* Tabs */}
-                        <div className="flex border-b mb-4">
-                            {tabs.filter(tab => {
-                                // Filter out tabs based on role
-                                if (userDetails.role === 'ADMIN' || userDetails.role === 'SUPER_ADMIN') {
-                                    return ['info', 'history', 'security'].includes(tab.id)
-                                }
-                                return true
-                            }).map(tab => {
-                                // Rename Startups to Deals for Investors
-                                if (tab.id === 'startups' && userDetails.role === 'INVESTOR') {
+                            {/* Tabs */}
+                            <div className="flex border-b mb-4 sticky top-0 bg-background z-10 pt-2">
+                                {tabs.filter(tab => {
+                                    // Filter out tabs based on role
+                                    if (userDetails.role === 'ADMIN' || userDetails.role === 'SUPER_ADMIN') {
+                                        return ['info', 'history', 'security'].includes(tab.id)
+                                    }
+                                    return true
+                                }).map(tab => {
+                                    // Rename Startups to Deals for Investors
+                                    if (tab.id === 'startups' && userDetails.role === 'INVESTOR') {
+                                        return (
+                                            <button
+                                                key={tab.id}
+                                                onClick={() => setActiveTab(tab.id)}
+                                                className={`flex items-center gap-2 px-4 py-2 text-sm font-medium border-b-2 transition-colors ${activeTab === tab.id
+                                                    ? 'border-primary text-primary'
+                                                    : 'border-transparent text-muted-foreground hover:text-foreground'
+                                                    }`}
+                                            >
+                                                <TrendingUp className="h-4 w-4" /> {/* Use TrendingUp icon for Deals */}
+                                                Deals
+                                            </button>
+                                        )
+                                    }
                                     return (
                                         <button
                                             key={tab.id}
@@ -351,407 +460,395 @@ export function UserDetailsModal({ userId, open, onOpenChange, onAction }: UserD
                                                 : 'border-transparent text-muted-foreground hover:text-foreground'
                                                 }`}
                                         >
-                                            <TrendingUp className="h-4 w-4" /> {/* Use TrendingUp icon for Deals */}
-                                            Deals
+                                            <tab.icon className="h-4 w-4" />
+                                            {tab.label}
+                                            {tab.count !== undefined && tab.count > 0 && (
+                                                <span className="ml-1 px-1.5 py-0.5 text-xs bg-muted rounded-full">
+                                                    {tab.count}
+                                                </span>
+                                            )}
                                         </button>
                                     )
-                                }
-                                return (
-                                    <button
-                                        key={tab.id}
-                                        onClick={() => setActiveTab(tab.id)}
-                                        className={`flex items-center gap-2 px-4 py-2 text-sm font-medium border-b-2 transition-colors ${activeTab === tab.id
-                                            ? 'border-primary text-primary'
-                                            : 'border-transparent text-muted-foreground hover:text-foreground'
-                                            }`}
-                                    >
-                                        <tab.icon className="h-4 w-4" />
-                                        {tab.label}
-                                        {tab.count !== undefined && tab.count > 0 && (
-                                            <span className="ml-1 px-1.5 py-0.5 text-xs bg-muted rounded-full">
-                                                {tab.count}
-                                            </span>
-                                        )}
-                                    </button>
-                                )
-                            })}
-                        </div>
+                                })}
+                            </div>
 
-                        {/* Tab Content */}
-                        <div className="flex-1 overflow-y-auto pr-2">
-                            {/* Info Tab */}
-                            {activeTab === 'info' && (
-                                <div className="space-y-4">
-                                    {/* Contact Info */}
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <InfoRow icon={User} label="Username" value={userDetails.username || userDetails.email.split('@')[0]} />
-                                        <InfoRow icon={Mail} label="Email" value={userDetails.email} />
-                                        <InfoRow icon={User} label="First Name" value={userDetails.firstName || '-'} />
-                                        <InfoRow icon={User} label="Last Name" value={userDetails.lastName || '-'} />
-                                        {(userDetails.role !== 'ADMIN' && userDetails.role !== 'SUPER_ADMIN') && (
-                                            <>
-                                                <InfoRow icon={Phone} label="Phone" value={userDetails.phoneNumber || 'Not provided'} />
-                                                <InfoRow icon={MapPin} label="Country" value={userDetails.country || 'Not specified'} />
-                                                <InfoRow icon={Shield} label="Auth Provider" value={userDetails.authProvider} />
-                                            </>
-                                        )}
-                                    </div>
-
-                                    {/* Additional Info (Bio & LinkedIn) moved here for universal visibility - HIDDEN FOR ADMIN/SUPER_ADMIN */}
-                                    {(userDetails.role !== 'ADMIN' && userDetails.role !== 'SUPER_ADMIN') && (
-                                        <div className="grid grid-cols-1 gap-4 mt-4">
-                                            <div className="flex items-center gap-3">
-                                                <Globe className="h-4 w-4 text-muted-foreground" />
-                                                <div>
-                                                    <p className="text-xs text-muted-foreground">LinkedIn</p>
-                                                    {userDetails.linkedInUrl ? (
-                                                        <a
-                                                            href={userDetails.linkedInUrl.startsWith('http') ? userDetails.linkedInUrl : `https://www.linkedin.com/in/${userDetails.linkedInUrl.replace(/^\/+/, '')}`}
-                                                            target="_blank"
-                                                            rel="noopener noreferrer"
-                                                            className="text-sm font-medium text-blue-500 hover:underline"
-                                                        >
-                                                            {userDetails.linkedInUrl.replace(/^https?:\/\/(www\.)?linkedin\.com\/in\//, '').replace(/\/$/, '') || 'View Profile'}
-                                                        </a>
-                                                    ) : (
-                                                        <p className="text-sm text-muted-foreground italic">Not provided</p>
-                                                    )}
-                                                </div>
-                                            </div>
-
-                                            <div className="flex items-start gap-3">
-                                                <Briefcase className="h-4 w-4 text-muted-foreground mt-1" />
-                                                <div>
-                                                    <p className="text-xs text-muted-foreground">Bio</p>
-                                                    <p className="text-sm text-foreground/80 whitespace-pre-wrap">
-                                                        {userDetails.bio || <span className="text-muted-foreground italic">No bio provided</span>}
-                                                    </p>
-                                                </div>
-                                            </div>
+                            {/* Tab Content */}
+                            <div className="pb-4">
+                                {/* Info Tab */}
+                                {activeTab === 'info' && (
+                                    <div className="space-y-4">
+                                        {/* Contact Info */}
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <InfoRow icon={User} label="Username" value={userDetails.username || userDetails.email.split('@')[0]} />
+                                            <InfoRow icon={Mail} label="Email" value={userDetails.email} />
+                                            <InfoRow icon={User} label="First Name" value={userDetails.firstName || '-'} />
+                                            <InfoRow icon={User} label="Last Name" value={userDetails.lastName || '-'} />
+                                            {(userDetails.role !== 'ADMIN' && userDetails.role !== 'SUPER_ADMIN') && (
+                                                <>
+                                                    <InfoRow icon={Phone} label="Phone" value={userDetails.phoneNumber || 'Not provided'} />
+                                                    <InfoRow icon={MapPin} label="Country" value={userDetails.country || 'Not specified'} />
+                                                    <InfoRow icon={Shield} label="Auth Provider" value={userDetails.authProvider} />
+                                                </>
+                                            )}
                                         </div>
-                                    )}
-                                    <Separator />
 
-                                    {/* Timestamps */}
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <InfoRow icon={Calendar} label="Joined" value={formatDate(userDetails.createdAt)} />
-                                        <InfoRow icon={Clock} label="Last Login" value={userDetails.lastLoginAt ? formatDate(userDetails.lastLoginAt) : 'Never'} />
-                                    </div>
-
-                                    {/* Suspension Info */}
-                                    {userDetails.status === 'SUSPENDED' && (
-                                        <>
-                                            <Separator />
-                                            <div className="p-4 rounded-lg bg-orange-500/10 border border-orange-500/30">
-                                                <h4 className="font-semibold text-orange-500 flex items-center gap-2">
-                                                    <Ban className="h-4 w-4" />
-                                                    Suspension Details
-                                                </h4>
-                                                <div className="mt-2 space-y-1 text-sm">
-                                                    <p><strong>Type:</strong> {userDetails.suspensionType || 'Temporary'}</p>
-                                                    <p><strong>Since:</strong> {userDetails.suspendedAt ? formatDate(userDetails.suspendedAt) : '-'}</p>
-                                                    {userDetails.suspendedUntil && (
-                                                        <p><strong>Until:</strong> {formatDate(userDetails.suspendedUntil)}</p>
-                                                    )}
-                                                    <p><strong>Reason:</strong> {userDetails.suspendReason || '-'}</p>
-                                                </div>
-                                            </div>
-                                        </>
-                                    )}
-
-
-                                    {/* Investor Profile */}
-                                    {userDetails.role === 'INVESTOR' && (
-                                        <>
-                                            <Separator />
-                                            {userDetails.investorInfo ? (
-                                                <div className="p-4 rounded-lg bg-emerald-500/10 border border-emerald-500/30">
-                                                    <h4 className="font-semibold text-emerald-500 flex items-center gap-2">
-                                                        <TrendingUp className="h-4 w-4" />
-                                                        Investor Profile
-                                                        {userDetails.investorInfo.isVerified ? (
-                                                            <CheckCircle className="h-4 w-4 text-green-500" />
+                                        {/* Additional Info (Bio & LinkedIn) moved here for universal visibility - HIDDEN FOR ADMIN/SUPER_ADMIN */}
+                                        {(userDetails.role !== 'ADMIN' && userDetails.role !== 'SUPER_ADMIN') && (
+                                            <div className="grid grid-cols-1 gap-4 mt-4">
+                                                <div className="flex items-center gap-3">
+                                                    <Globe className="h-4 w-4 text-muted-foreground" />
+                                                    <div>
+                                                        <p className="text-xs text-muted-foreground">LinkedIn</p>
+                                                        {userDetails.linkedInUrl ? (
+                                                            <a
+                                                                href={userDetails.linkedInUrl.startsWith('http') ? userDetails.linkedInUrl : `https://www.linkedin.com/in/${userDetails.linkedInUrl.replace(/^\/+/, '')}`}
+                                                                target="_blank"
+                                                                rel="noopener noreferrer"
+                                                                className="text-sm font-medium text-blue-500 hover:underline"
+                                                            >
+                                                                {userDetails.linkedInUrl.replace(/^https?:\/\/(www\.)?linkedin\.com\/in\//, '').replace(/\/$/, '') || 'View Profile'}
+                                                            </a>
                                                         ) : (
-                                                            <span className="text-muted-foreground text-xs font-normal border px-2 py-0.5 rounded-full">Not Verified</span>
-                                                        )}
-                                                    </h4>
-                                                    <div className="mt-2 space-y-1 text-sm">
-                                                        <p><strong>Investment Budget:</strong> ${userDetails.investorInfo.investmentBudget?.toLocaleString() || 0}</p>
-                                                        <p><strong>Preferred Industries:</strong> {userDetails.investorInfo.preferredIndustries || '-'}</p>
-                                                        <p><strong>Preferred Stage:</strong> {userDetails.investorInfo.preferredStage || 'All Stages'}</p>
-                                                        <div className="flex items-center gap-2 mt-2 pt-2 border-t border-emerald-500/20">
-                                                            <p><strong>Payment Status:</strong></p>
-                                                            {userDetails.investorInfo.isVerified ? (
-                                                                <Badge className="bg-green-500 text-white">Paid & Verified</Badge>
-                                                            ) : userDetails.investorInfo.readyForPayment ? (
-                                                                <Badge className="bg-blue-500 text-white">Ready for Payment</Badge>
-                                                            ) : (
-                                                                <div className="flex items-center gap-2">
-                                                                    <Badge variant="outline" className="text-muted-foreground bg-gray-500/10">Pending Approval</Badge>
-                                                                    <Button
-                                                                        size="sm"
-                                                                        variant="outline"
-                                                                        className="h-6 text-xs border-emerald-500/50 text-emerald-600 hover:bg-emerald-500/10"
-                                                                        onClick={async () => {
-                                                                            if (!confirm('Approve this investor for payment?')) return;
-                                                                            try {
-                                                                                await api.put(`/admin/users/${userId}/approve-payment`);
-                                                                                toast.success('Investor approved for payment');
-                                                                                fetchUserDetails();
-                                                                            } catch (e) {
-                                                                                toast.error('Failed to approve payment');
-                                                                            }
-                                                                        }}
-                                                                    >
-                                                                        Approve
-                                                                    </Button>
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                        {userDetails.investorInfo.verifiedAt && (
-                                                            <p><strong>Verified Since:</strong> {formatDate(userDetails.investorInfo.verifiedAt)}</p>
+                                                            <p className="text-sm text-muted-foreground italic">Not provided</p>
                                                         )}
                                                     </div>
                                                 </div>
-                                            ) : (
-                                                <div className="p-4 rounded-lg bg-yellow-500/10 border border-yellow-500/30">
-                                                    <h4 className="font-semibold text-yellow-500 flex items-center gap-2">
-                                                        <AlertCircle className="h-4 w-4" />
-                                                        Investor Profile Incomplete
-                                                    </h4>
-                                                    <p className="mt-2 text-sm text-muted-foreground">
-                                                        This user is registered as an investor but hasn't completed their investor profile yet.
-                                                    </p>
-                                                </div>
-                                            )}
-                                        </>
-                                    )}
 
-                                    {/* Stats */}
-                                    <div className="grid grid-cols-3 gap-4">
-                                        {(userDetails.role !== 'ADMIN' && userDetails.role !== 'SUPER_ADMIN') && (
-                                            <StatCard
-                                                icon={Building2}
-                                                label={userDetails.role === 'INVESTOR' ? 'Deals (Mock)' : 'Startups'}
-                                                value={userDetails.role === 'INVESTOR' ? 0 : userDetails.startupCount}
-                                                color="purple"
-                                            />
+                                                <div className="flex items-start gap-3">
+                                                    <Briefcase className="h-4 w-4 text-muted-foreground mt-1" />
+                                                    <div>
+                                                        <p className="text-xs text-muted-foreground">Bio</p>
+                                                        <p className="text-sm text-foreground/80 whitespace-pre-wrap">
+                                                            {userDetails.bio || <span className="text-muted-foreground italic">No bio provided</span>}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </div>
                                         )}
-                                        {(userDetails.role === 'ADMIN' || userDetails.role === 'SUPER_ADMIN') ? (
-                                            // Admin specific stats (focus on History/Security)
+                                        <Separator />
+
+                                        {/* Timestamps */}
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <InfoRow icon={Calendar} label="Joined" value={formatDate(userDetails.createdAt)} />
+                                            <InfoRow icon={Clock} label="Last Login" value={userDetails.lastLoginAt ? formatDate(userDetails.lastLoginAt) : 'Never'} />
+                                        </div>
+
+                                        {/* Suspension Info */}
+                                        {userDetails.status === 'SUSPENDED' && (
                                             <>
-                                                <StatCard
-                                                    icon={Clock}
-                                                    label="Admin Actions"
-                                                    value={userDetails.moderationHistory?.length || 0}
-                                                    color="purple"
-                                                />
-                                                <StatCard
-                                                    icon={Shield}
-                                                    label="Active Sessions"
-                                                    value={userDetails.hasActiveSession ? 'Active' : 'Offline'}
-                                                    color="green"
-                                                />
-                                                <StatCard
-                                                    icon={AlertTriangle}
-                                                    label="Warnings Received"
-                                                    value={userDetails.warningCount}
-                                                    color="yellow"
-                                                />
+                                                <Separator />
+                                                <div className="p-4 rounded-lg bg-orange-500/10 border border-orange-500/30">
+                                                    <h4 className="font-semibold text-orange-500 flex items-center gap-2">
+                                                        <Ban className="h-4 w-4" />
+                                                        Suspension Details
+                                                    </h4>
+                                                    <div className="mt-2 space-y-1 text-sm">
+                                                        <p><strong>Type:</strong> {userDetails.suspensionType || 'Temporary'}</p>
+                                                        <p><strong>Since:</strong> {userDetails.suspendedAt ? formatDate(userDetails.suspendedAt) : '-'}</p>
+                                                        {userDetails.suspendedUntil && (
+                                                            <p><strong>Until:</strong> {formatDate(userDetails.suspendedUntil)}</p>
+                                                        )}
+                                                        <p><strong>Reason:</strong> {userDetails.suspendReason || '-'}</p>
+                                                    </div>
+                                                </div>
                                             </>
-                                        ) : (
+                                        )}
+
+
+                                        {/* Investor Profile */}
+                                        {userDetails.role === 'INVESTOR' && (
                                             <>
-                                                <StatCard
-                                                    icon={AlertTriangle}
-                                                    label="Warnings"
-                                                    value={userDetails.warningCount}
-                                                    color="yellow"
-                                                />
-                                                {/* Hide Plan Stat for Investors */}
-                                                {userDetails.role !== 'INVESTOR' && (
-                                                    <StatCard
-                                                        icon={DollarSign}
-                                                        label="Plan"
-                                                        value={userDetails.currentSubscription?.plan || 'FREE'}
-                                                        color="blue"
-                                                    />
+                                                <Separator />
+                                                {userDetails.investorInfo ? (
+                                                    <div className="p-4 rounded-lg bg-emerald-500/10 border border-emerald-500/30">
+                                                        <h4 className="font-semibold text-emerald-500 flex items-center gap-2">
+                                                            <TrendingUp className="h-4 w-4" />
+                                                            Investor Profile
+                                                            {userDetails.investorInfo.isVerified ? (
+                                                                <CheckCircle className="h-4 w-4 text-green-500" />
+                                                            ) : (
+                                                                <span className="text-muted-foreground text-xs font-normal border px-2 py-0.5 rounded-full">Not Verified</span>
+                                                            )}
+                                                        </h4>
+                                                        <div className="mt-2 space-y-1 text-sm">
+                                                            <p><strong>Investment Budget:</strong> ${userDetails.investorInfo.investmentBudget?.toLocaleString() || 0}</p>
+                                                            <p><strong>Preferred Industries:</strong> {userDetails.investorInfo.preferredIndustries || '-'}</p>
+                                                            <p><strong>Preferred Stage:</strong> {userDetails.investorInfo.preferredStage || 'All Stages'}</p>
+                                                            <div className="flex items-center gap-2 mt-2 pt-2 border-t border-emerald-500/20">
+                                                                <p><strong>Payment Status:</strong></p>
+                                                                {userDetails.investorInfo.isVerified ? (
+                                                                    <Badge className="bg-green-500 text-white">Paid & Verified</Badge>
+                                                                ) : userDetails.investorInfo.readyForPayment ? (
+                                                                    <Badge className="bg-blue-500 text-white">Ready for Payment</Badge>
+                                                                ) : (
+                                                                    <div className="flex items-center gap-2">
+                                                                        <Badge variant="outline" className="text-muted-foreground bg-gray-500/10">Pending Approval</Badge>
+                                                                        <Button
+                                                                            size="sm"
+                                                                            variant="outline"
+                                                                            className="h-6 text-xs border-emerald-500/50 text-emerald-600 hover:bg-emerald-500/10"
+                                                                            onClick={async () => {
+                                                                                if (!confirm('Approve this investor for payment?')) return;
+                                                                                try {
+                                                                                    await api.put(`/admin/users/${userId}/approve-payment`);
+                                                                                    toast.success('Investor approved for payment');
+                                                                                    fetchUserDetails();
+                                                                                } catch (e) {
+                                                                                    toast.error('Failed to approve payment');
+                                                                                }
+                                                                            }}
+                                                                        >
+                                                                            Approve
+                                                                        </Button>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                            {userDetails.investorInfo.verifiedAt && (
+                                                                <p><strong>Verified Since:</strong> {formatDate(userDetails.investorInfo.verifiedAt)}</p>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                ) : (
+                                                    <div className="p-4 rounded-lg bg-yellow-500/10 border border-yellow-500/30">
+                                                        <h4 className="font-semibold text-yellow-500 flex items-center gap-2">
+                                                            <AlertCircle className="h-4 w-4" />
+                                                            Investor Profile Incomplete
+                                                        </h4>
+                                                        <p className="mt-2 text-sm text-muted-foreground">
+                                                            This user is registered as an investor but hasn't completed their investor profile yet.
+                                                        </p>
+                                                    </div>
                                                 )}
                                             </>
                                         )}
-                                    </div>
-                                </div>
-                            )}
 
-                            {/* Startups/Deals Tab */}
-                            {activeTab === 'startups' && (
-                                <div className="space-y-4">
-                                    {userDetails.role === 'INVESTOR' ? (
-                                        <div className="text-center py-12 text-muted-foreground bg-muted/20 rounded-lg border border-dashed">
-                                            <TrendingUp className="h-12 w-12 mx-auto mb-2 opacity-50 text-emerald-500" />
-                                            <h4 className="text-lg font-semibold text-foreground">Deals Tracking</h4>
-                                            <p className="text-sm">Investment deals history will be available here soon.</p>
-                                            <Badge variant="outline" className="mt-2">Coming Soon</Badge>
+                                        {/* Stats */}
+                                        <div className="grid grid-cols-3 gap-4">
+                                            {(userDetails.role !== 'ADMIN' && userDetails.role !== 'SUPER_ADMIN') && (
+                                                <StatCard
+                                                    icon={Building2}
+                                                    label={userDetails.role === 'INVESTOR' ? 'Deals (Mock)' : 'Startups'}
+                                                    value={userDetails.role === 'INVESTOR' ? 0 : userDetails.startupCount}
+                                                    color="purple"
+                                                />
+                                            )}
+                                            {(userDetails.role === 'ADMIN' || userDetails.role === 'SUPER_ADMIN') ? (
+                                                // Admin specific stats (focus on History/Security)
+                                                <>
+                                                    <StatCard
+                                                        icon={Clock}
+                                                        label="Admin Actions"
+                                                        value={userDetails.moderationHistory?.length || 0}
+                                                        color="purple"
+                                                    />
+                                                    <StatCard
+                                                        icon={Shield}
+                                                        label="Active Sessions"
+                                                        value={userDetails.hasActiveSession ? 'Active' : 'Offline'}
+                                                        color="green"
+                                                    />
+                                                    <StatCard
+                                                        icon={AlertTriangle}
+                                                        label="Warnings Received"
+                                                        value={userDetails.warningCount}
+                                                        color="yellow"
+                                                    />
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <StatCard
+                                                        icon={AlertTriangle}
+                                                        label="Warnings"
+                                                        value={userDetails.warningCount}
+                                                        color="yellow"
+                                                    />
+                                                    {/* Hide Plan Stat for Investors */}
+                                                    {userDetails.role !== 'INVESTOR' && (
+                                                        <StatCard
+                                                            icon={DollarSign}
+                                                            label="Plan"
+                                                            value={userDetails.currentSubscription?.plan || 'FREE'}
+                                                            color="blue"
+                                                        />
+                                                    )}
+                                                </>
+                                            )}
                                         </div>
-                                    ) : (
-                                        userDetails.startups && userDetails.startups.length > 0 ? (
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                {userDetails.startups.map(startup => (
-                                                    <div
-                                                        key={startup.id}
-                                                        className="group relative flex flex-col justify-between p-4 rounded-xl border bg-card hover:shadow-md transition-all duration-200 hover:border-primary/20 cursor-pointer"
-                                                        onClick={() => handleViewStartup(startup.id)}
-                                                    >
-                                                        <div className="flex items-start justify-between mb-3">
-                                                            <div className="flex items-center gap-3">
-                                                                <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-purple-500/10 to-blue-500/10 flex items-center justify-center border border-purple-500/10 group-hover:border-purple-500/20 transition-colors">
-                                                                    <Building2 className="h-5 w-5 text-purple-600" />
-                                                                </div>
-                                                                <div>
-                                                                    <h4 className="font-bold text-base leading-tight group-hover:text-primary transition-colors line-clamp-1" title={startup.name}>
-                                                                        {startup.name}
-                                                                    </h4>
-                                                                    <p className="text-xs text-muted-foreground">{startup.industry || 'Tech'}</p>
-                                                                </div>
-                                                            </div>
-                                                            {getStatusBadge(startup.status || 'PENDING')}
-                                                        </div>
+                                    </div>
+                                )}
 
-                                                        <div className="space-y-3">
-                                                            <div className="flex flex-wrap gap-2 text-xs">
-                                                                <Badge variant="secondary" className="font-normal bg-secondary/50">
-                                                                    {startup.stage || 'Idea'}
-                                                                </Badge>
-                                                                {startup.role && (
-                                                                    <Badge variant="outline" className="font-medium bg-primary/5 text-primary border-primary/20">
-                                                                        {startup.role.replace('_', ' ')}
-                                                                    </Badge>
-                                                                )}
-                                                            </div>
-
-                                                            <div className="pt-3 border-t grid grid-cols-2 gap-2 text-xs text-muted-foreground">
-                                                                <div className="flex flex-col">
-                                                                    <span className="text-[10px] uppercase tracking-wider opacity-70">Raised</span>
-                                                                    <span className="font-semibold text-foreground flex items-center gap-1">
-                                                                        <DollarSign className="h-3 w-3" />
-                                                                        {startup.raisedAmount?.toLocaleString() || 0}
-                                                                    </span>
-                                                                </div>
-                                                                <div className="flex flex-col items-end">
-                                                                    <span className="text-[10px] uppercase tracking-wider opacity-70">Created</span>
-                                                                    <span className="font-medium text-foreground">
-                                                                        {startup.createdAt ? new Date(startup.createdAt).toLocaleDateString() : '-'}
-                                                                    </span>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-
-                                                        {/* Hover Action */}
-                                                        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                            <div className="bg-background/80 backdrop-blur-sm rounded-full p-1.5 shadow-sm border">
-                                                                <Eye className="h-3.5 w-3.5 text-primary" />
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                ))}
+                                {/* Startups/Deals Tab */}
+                                {activeTab === 'startups' && (
+                                    <div className="space-y-4">
+                                        {userDetails.role === 'INVESTOR' ? (
+                                            <div className="text-center py-12 text-muted-foreground bg-muted/20 rounded-lg border border-dashed">
+                                                <TrendingUp className="h-12 w-12 mx-auto mb-2 opacity-50 text-emerald-500" />
+                                                <h4 className="text-lg font-semibold text-foreground">Deals Tracking</h4>
+                                                <p className="text-sm">Investment deals history will be available here soon.</p>
+                                                <Badge variant="outline" className="mt-2">Coming Soon</Badge>
                                             </div>
                                         ) : (
-                                            <div className="text-center py-12 text-muted-foreground bg-muted/10 rounded-lg border border-dashed">
-                                                <Briefcase className="h-10 w-10 mx-auto mb-3 opacity-30" />
-                                                <p className="font-medium">No startups associated</p>
-                                                <p className="text-xs opacity-70 mt-1">This user is not an owner or member of any startup.</p>
-                                            </div>
-                                        )
-                                    )}
-                                </div>
-                            )}
+                                            userDetails.startups && userDetails.startups.length > 0 ? (
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                    {userDetails.startups.map(startup => (
+                                                        <div
+                                                            key={startup.id}
+                                                            className="group relative flex flex-col justify-between p-4 rounded-xl border bg-card hover:shadow-md transition-all duration-200 hover:border-primary/20 cursor-pointer"
+                                                            onClick={() => handleViewStartup(startup.id)}
+                                                        >
+                                                            <div className="flex items-start justify-between mb-3">
+                                                                <div className="flex items-center gap-3">
+                                                                    <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-purple-500/10 to-blue-500/10 flex items-center justify-center border border-purple-500/10 group-hover:border-purple-500/20 transition-colors">
+                                                                        <Building2 className="h-5 w-5 text-purple-600" />
+                                                                    </div>
+                                                                    <div>
+                                                                        <h4 className="font-bold text-base leading-tight group-hover:text-primary transition-colors line-clamp-1" title={startup.name}>
+                                                                            {startup.name}
+                                                                        </h4>
+                                                                        <p className="text-xs text-muted-foreground">{startup.industry || 'Tech'}</p>
+                                                                    </div>
+                                                                </div>
+                                                                {getStatusBadge(startup.status || 'PENDING')}
+                                                            </div>
 
-                            {/* Transactions Tab */}
-                            {activeTab === 'transactions' && (
-                                <div className="space-y-3">
-                                    {userDetails.recentTransactions && userDetails.recentTransactions.length > 0 ? (
-                                        userDetails.recentTransactions.map(tx => (
-                                            <div key={tx.transactionId} className="p-4 rounded-lg border bg-card">
-                                                <div className="flex items-start justify-between">
-                                                    <div>
-                                                        <h4 className="font-semibold flex items-center gap-2">
-                                                            <CreditCard className="h-4 w-4 text-blue-500" />
-                                                            {tx.description || 'Payment'}
-                                                        </h4>
-                                                        <p className="text-sm text-muted-foreground">{tx.transactionId}</p>
-                                                    </div>
-                                                    <div className="text-right">
-                                                        <p className="font-bold text-green-500">
-                                                            ${tx.amount?.toLocaleString()} {tx.currency}
-                                                        </p>
-                                                        <Badge variant="outline" className="text-xs">{tx.status}</Badge>
-                                                    </div>
-                                                </div>
-                                                <div className="mt-2 flex items-center gap-4 text-xs text-muted-foreground">
-                                                    <span>Method: {tx.paymentMethod || '-'}</span>
-                                                    {tx.timestamp && <span>{formatDate(tx.timestamp)}</span>}
-                                                </div>
-                                            </div>
-                                        ))
-                                    ) : (
-                                        <div className="text-center py-8 text-muted-foreground">
-                                            <CreditCard className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                                            <p>No transactions found</p>
-                                        </div>
-                                    )}
-                                </div>
-                            )}
+                                                            <div className="space-y-3">
+                                                                <div className="flex flex-wrap gap-2 text-xs">
+                                                                    <Badge variant="secondary" className="font-normal bg-secondary/50">
+                                                                        {startup.stage || 'Idea'}
+                                                                    </Badge>
+                                                                    {startup.role && (
+                                                                        <Badge variant="outline" className="font-medium bg-primary/5 text-primary border-primary/20">
+                                                                            {startup.role.replace('_', ' ')}
+                                                                        </Badge>
+                                                                    )}
+                                                                </div>
 
-                            {/* History Tab */}
-                            {activeTab === 'history' && (
-                                <div className="space-y-3">
-                                    {userDetails.moderationHistory && userDetails.moderationHistory.length > 0 ? (
-                                        userDetails.moderationHistory.map(log => (
-                                            <div key={log.id} className="p-4 rounded-lg border bg-card relative group">
-                                                <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        className="h-6 w-6 text-destructive hover:text-destructive hover:bg-destructive/10"
-                                                        onClick={() => handleDeleteLog(log.id)}
-                                                    >
-                                                        <Trash2 className="h-4 w-4" />
-                                                    </Button>
-                                                </div>
-                                                <div className="flex items-start justify-between pr-8">
-                                                    <div>
-                                                        <h4 className="font-semibold flex items-center gap-2">
-                                                            <ActionIcon type={log.actionType} />
-                                                            {log.actionType.replace('_', ' ')}
-                                                        </h4>
-                                                        <p className="text-sm text-muted-foreground">{log.reason}</p>
-                                                    </div>
-                                                    <Badge variant={log.isActive ? 'default' : 'outline'}>
-                                                        {log.isActive ? 'Active' : 'Resolved'}
-                                                    </Badge>
-                                                </div>
-                                                <div className="mt-2 flex items-center gap-4 text-xs text-muted-foreground">
-                                                    <span>By: {log.adminEmail}</span>
-                                                    <span>{formatDate(log.createdAt)}</span>
-                                                </div>
-                                            </div>
-                                        ))
-                                    ) : (
-                                        <div className="text-center py-8 text-muted-foreground">
-                                            <Clock className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                                            <p>No moderation history</p>
-                                        </div>
-                                    )}
-                                </div>
-                            )}
+                                                                <div className="pt-3 border-t grid grid-cols-2 gap-2 text-xs text-muted-foreground">
+                                                                    <div className="flex flex-col">
+                                                                        <span className="text-[10px] uppercase tracking-wider opacity-70">Raised</span>
+                                                                        <span className="font-semibold text-foreground flex items-center gap-1">
+                                                                            <DollarSign className="h-3 w-3" />
+                                                                            {startup.raisedAmount?.toLocaleString() || 0}
+                                                                        </span>
+                                                                    </div>
+                                                                    <div className="flex flex-col items-end">
+                                                                        <span className="text-[10px] uppercase tracking-wider opacity-70">Created</span>
+                                                                        <span className="font-medium text-foreground">
+                                                                            {startup.createdAt ? new Date(startup.createdAt).toLocaleDateString() : '-'}
+                                                                        </span>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
 
-                            {/* Security Tab */}
-                            {activeTab === 'security' && (
-                                <SecurityTab userId={userId} canManageUser={canManageUser} />
-                            )}
+                                                            {/* Hover Action */}
+                                                            <div className="absolute top-2 right-2">
+                                                                <div className="bg-background/80 backdrop-blur-sm rounded-full p-1.5 shadow-sm border">
+                                                                    <Eye className="h-3.5 w-3.5 text-primary" />
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            ) : (
+                                                <div className="text-center py-12 text-muted-foreground bg-muted/10 rounded-lg border border-dashed">
+                                                    <Briefcase className="h-10 w-10 mx-auto mb-3 opacity-30" />
+                                                    <p className="font-medium">No startups associated</p>
+                                                    <p className="text-xs opacity-70 mt-1">This user is not an owner or member of any startup.</p>
+                                                </div>
+                                            )
+                                        )}
+                                    </div>
+                                )}
+
+                                {/* Transactions Tab */}
+                                {activeTab === 'transactions' && (
+                                    <div className="space-y-3">
+                                        {userDetails.recentTransactions && userDetails.recentTransactions.length > 0 ? (
+                                            userDetails.recentTransactions.map(tx => (
+                                                <div key={tx.transactionId} className="p-4 rounded-lg border bg-card">
+                                                    <div className="flex items-start justify-between">
+                                                        <div>
+                                                            <h4 className="font-semibold flex items-center gap-2">
+                                                                <CreditCard className="h-4 w-4 text-blue-500" />
+                                                                {tx.description || 'Payment'}
+                                                            </h4>
+                                                            <p className="text-sm text-muted-foreground">{tx.transactionId}</p>
+                                                        </div>
+                                                        <div className="text-right">
+                                                            <p className="font-bold text-green-500">
+                                                                ${tx.amount?.toLocaleString()} {tx.currency}
+                                                            </p>
+                                                            <Badge variant="outline" className="text-xs">{tx.status}</Badge>
+                                                        </div>
+                                                    </div>
+                                                    <div className="mt-2 flex items-center gap-4 text-xs text-muted-foreground">
+                                                        <span>Method: {tx.paymentMethod || '-'}</span>
+                                                        {tx.timestamp && <span>{formatDate(tx.timestamp)}</span>}
+                                                    </div>
+                                                </div>
+                                            ))
+                                        ) : (
+                                            <div className="text-center py-8 text-muted-foreground">
+                                                <CreditCard className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                                                <p>No transactions found</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+
+                                {/* History Tab */}
+                                {activeTab === 'history' && (
+                                    <div className="space-y-3">
+                                        {userDetails.moderationHistory && userDetails.moderationHistory.length > 0 ? (
+                                            userDetails.moderationHistory.map(log => (
+                                                <div key={log.id} className="p-4 rounded-lg border bg-card relative group">
+                                                    <div className="absolute top-2 right-2">
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className="h-6 w-6 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                                            onClick={() => handleDeleteLog(log.id)}
+                                                        >
+                                                            <Trash2 className="h-4 w-4" />
+                                                        </Button>
+                                                    </div>
+                                                    <div className="flex items-start justify-between pr-8">
+                                                        <div>
+                                                            <h4 className="font-semibold flex items-center gap-2">
+                                                                <ActionIcon type={log.actionType} />
+                                                                {log.actionType.replace('_', ' ')}
+                                                            </h4>
+                                                            <p className="text-sm text-muted-foreground">{log.reason}</p>
+                                                        </div>
+                                                        <Badge variant={log.isActive ? 'default' : 'outline'}>
+                                                            {log.isActive ? 'Active' : 'Resolved'}
+                                                        </Badge>
+                                                    </div>
+                                                    <div className="mt-2 flex items-center gap-4 text-xs text-muted-foreground">
+                                                        <span>By: {log.adminEmail}</span>
+                                                        <span>{formatDate(log.createdAt)}</span>
+                                                    </div>
+                                                </div>
+                                            ))
+                                        ) : (
+                                            <div className="text-center py-8 text-muted-foreground">
+                                                <Clock className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                                                <p>No moderation history</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+
+                                {/* Security Tab */}
+                                {activeTab === 'security' && (
+                                    <SecurityTab userId={userId} canManageUser={canManageUser} />
+                                )}
+                            </div>
                         </div>
-                    </div>
-                )}
-            </DialogContent>
+                    )}
+                </DialogContent>
+            </Dialog>
+
             <StartupDetailsDialog
                 open={isStartupDetailsOpen}
                 onOpenChange={setIsStartupDetailsOpen}
@@ -777,7 +874,51 @@ export function UserDetailsModal({ userId, open, onOpenChange, onAction }: UserD
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
-        </Dialog>
+
+            {userDetails && (
+                <>
+                    <SuspendUserDialog
+                        open={suspendDialogOpen}
+                        onOpenChange={setSuspendDialogOpen}
+                        userId={userDetails.id}
+
+                        onSuccess={handleActionComplete}
+                    />
+
+                    <WarnUserDialog
+                        open={warnDialogOpen}
+                        onOpenChange={setWarnDialogOpen}
+                        userId={userDetails.id}
+
+                        onSuccess={handleActionComplete}
+                    />
+
+                    <DeleteUserDialog
+                        open={deleteDialogOpen}
+                        onOpenChange={setDeleteDialogOpen}
+                        userId={userDetails.id}
+
+                        onSuccess={handleActionComplete}
+                    />
+
+                    <RestoreUserDialog
+                        open={restoreDialogOpen}
+                        onOpenChange={setRestoreDialogOpen}
+                        userId={userDetails.id}
+
+                        onSuccess={handleActionComplete}
+                    />
+
+                    <UserStatusDialog
+                        open={statusChangeDialogOpen}
+                        onOpenChange={setStatusChangeDialogOpen}
+                        userId={userDetails.id}
+                        currentStatus={userDetails.status}
+                        onSuccess={handleActionComplete}
+                    />
+                </>
+            )}
+        </>
     )
 }
 

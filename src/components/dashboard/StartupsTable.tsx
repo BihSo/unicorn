@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table'
 import { Startup } from '../../types'
 import { formatDate } from '../../lib/utils'
-import { StartupDetailsModal } from '../admin/StartupDetailsModal'
+import { StartupDetailsDialog } from './StartupDetailsDialog'
 import { fetchAllStartups as fetchStartupsApi } from '../../lib/api'
 import { toast } from 'sonner'
 import {
@@ -57,10 +57,7 @@ export function StartupsTable() {
         setIsModalOpen(true)
     }
 
-    const handleModalClose = () => {
-        setIsModalOpen(false)
-        setSelectedStartup(null)
-    }
+
 
     const handleActionComplete = () => {
         // Refresh the list after moderation action
@@ -186,43 +183,57 @@ export function StartupsTable() {
                                         </TableCell>
                                         {isAdmin && (
                                             <TableCell className="text-right">
-                                                <DropdownMenu>
-                                                    <DropdownMenuTrigger asChild>
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="icon"
-                                                            className="h-8 w-8 p-0"
-                                                            onClick={(e) => e.stopPropagation()}
-                                                        >
-                                                            <span className="sr-only">Open menu</span>
-                                                            <MoreVertical className="h-4 w-4" />
-                                                        </Button>
-                                                    </DropdownMenuTrigger>
-                                                    <DropdownMenuContent align="end">
-                                                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleRowClick(startup) }}>
-                                                            <Eye className="mr-2 h-4 w-4" />
-                                                            View Details
-                                                        </DropdownMenuItem>
-                                                        <DropdownMenuSeparator />
-                                                        <DropdownMenuItem onClick={(e) => handleStatusChange(e, startup)}>
-                                                            <Shield className="mr-2 h-4 w-4 text-blue-500" />
-                                                            Change Status
-                                                        </DropdownMenuItem>
-                                                        <DropdownMenuItem onClick={(e) => handleWarn(e, startup)}>
-                                                            <AlertTriangle className="mr-2 h-4 w-4 text-yellow-500" />
-                                                            Issue Warning
-                                                        </DropdownMenuItem>
-                                                        <DropdownMenuSeparator />
-                                                        <DropdownMenuItem
-                                                            onClick={(e) => handleDelete(e, startup)}
-                                                            className="text-red-600 focus:text-red-600"
-                                                        >
-                                                            <Trash2 className="mr-2 h-4 w-4" />
-                                                            Delete Permanently
-                                                        </DropdownMenuItem>
-                                                    </DropdownMenuContent>
-                                                </DropdownMenu>
+                                                <div className="flex items-center justify-end gap-1">
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="h-8 w-8 hover:bg-slate-800"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation()
+                                                            handleRowClick(startup)
+                                                        }}
+                                                        title="View Details"
+                                                    >
+                                                        <Eye className="h-4 w-4 text-blue-400" />
+                                                    </Button>
+                                                    <DropdownMenu>
+                                                        <DropdownMenuTrigger asChild>
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                className="h-8 w-8 p-0"
+                                                                onClick={(e) => e.stopPropagation()}
+                                                            >
+                                                                <span className="sr-only">Open menu</span>
+                                                                <MoreVertical className="h-4 w-4" />
+                                                            </Button>
+                                                        </DropdownMenuTrigger>
+                                                        <DropdownMenuContent align="end">
+                                                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                                            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleRowClick(startup) }}>
+                                                                <Eye className="mr-2 h-4 w-4" />
+                                                                View Details
+                                                            </DropdownMenuItem>
+                                                            <DropdownMenuSeparator />
+                                                            <DropdownMenuItem onClick={(e) => handleStatusChange(e, startup)}>
+                                                                <Shield className="mr-2 h-4 w-4 text-blue-500" />
+                                                                Change Status
+                                                            </DropdownMenuItem>
+                                                            <DropdownMenuItem onClick={(e) => handleWarn(e, startup)}>
+                                                                <AlertTriangle className="mr-2 h-4 w-4 text-yellow-500" />
+                                                                Issue Warning
+                                                            </DropdownMenuItem>
+                                                            <DropdownMenuSeparator />
+                                                            <DropdownMenuItem
+                                                                onClick={(e) => handleDelete(e, startup)}
+                                                                className="text-red-600 focus:text-red-600"
+                                                            >
+                                                                <Trash2 className="mr-2 h-4 w-4" />
+                                                                Delete Permanently
+                                                            </DropdownMenuItem>
+                                                        </DropdownMenuContent>
+                                                    </DropdownMenu>
+                                                </div>
                                             </TableCell>
                                         )}
                                     </TableRow>
@@ -234,10 +245,14 @@ export function StartupsTable() {
             </Card>
 
             {/* Details Modal */}
-            <StartupDetailsModal
+
+            <StartupDetailsDialog
                 startup={selectedStartup}
-                isOpen={isModalOpen}
-                onClose={handleModalClose}
+                open={isModalOpen}
+                onOpenChange={(open) => {
+                    setIsModalOpen(open)
+                    if (!open) setSelectedStartup(null)
+                }}
                 onActionComplete={handleActionComplete}
             />
 

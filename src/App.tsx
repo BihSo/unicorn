@@ -9,6 +9,7 @@ import { Financials } from './pages/Financials'
 import { Settings } from './pages/Settings'
 import { Security } from './pages/Security'
 import { InvestorVerificationPage } from './pages/InvestorVerification'
+import { Reports } from './pages/Reports'
 import Login from './pages/Login'
 import { ProtectedRoute } from './components/ProtectedRoute'
 
@@ -38,6 +39,7 @@ function App() {
                                 <Route path="/verification" element={<InvestorVerificationPage />} />
                                 <Route path="/financials" element={<Financials />} />
                                 <Route path="/security" element={<Security />} />
+                                <Route path="/reports" element={<Reports />} />
                                 <Route path="/settings" element={<Settings />} />
                             </Route>
                         </Route>

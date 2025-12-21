@@ -335,3 +335,123 @@ export interface SecurityStats {
 export async function fetchSecurityStats(): Promise<SecurityStats> {
     return request(api.get('/admin/security/stats'));
 }
+
+// ==================== Reports API ====================
+
+export interface Report {
+    id: string;
+    reporterId: string;
+    reportedEntityType: 'USER' | 'STARTUP';
+    reportedEntityId: string;
+    reason: string;
+    description: string;
+    status: 'PENDING' | 'UNDER_REVIEW' | 'RESOLVED' | 'REJECTED' | 'DISMISSED';
+    adminAction?: string;
+    adminId?: string;
+    adminNotes?: string;
+    actionDetails?: string;
+    notifyReporter: boolean;
+    reporterNotified: boolean;
+    createdAt: string;
+    updatedAt: string;
+    resolvedAt?: string;
+    reporterName?: string;
+    reporterImage?: string;
+    reportedEntityName?: string;
+    reportedEntityImage?: string;
+    reportedEntityStatus?: string;
+}
+
+export interface ReporterStatistics {
+    id: string;
+    userId: string;
+    totalReportsSubmitted: number;
+    resolvedReports: number;
+    rejectedReports: number;
+    falseReportRate: number;
+    reportingRestricted: boolean;
+    restrictedAt?: string;
+    restrictionReason?: string;
+    warningCount: number;
+    lastWarningAt?: string;
+}
+
+export interface CreateReportRequest {
+    reason: string;
+    description: string;
+}
+
+export interface ResolveReportRequest {
+    adminAction: string;
+    actionDetails?: string;
+    adminNotes?: string;
+    notifyReporter?: boolean;
+}
+
+// User endpoints
+export async function reportUser(userId: string, data: CreateReportRequest): Promise<{ message: string; reportId: string; status: string }> {
+    return request(api.post(`/reports/user/${userId}`, data));
+}
+
+export async function reportStartup(startupId: string, data: CreateReportRequest): Promise<{ message: string; reportId: string; status: string }> {
+    return request(api.post(`/reports/startup/${startupId}`, data));
+}
+
+export async function getMyReports(page: number = 0, size: number = 20): Promise<{ content: Report[]; totalElements: number; totalPages: number }> {
+    return request(api.get('/reports/my-reports', { params: { page, size } }));
+}
+
+// Admin endpoints
+export async function getAllReports(
+    page: number = 0,
+    size: number = 20,
+    status?: string,
+    entityType?: string
+): Promise<{ content: Report[]; totalElements: number; totalPages: number }> {
+    const params: any = { page, size };
+    if (status) params.status = status;
+    if (entityType) params.entityType = entityType;
+    return request(api.get('/admin/reports', { params }));
+}
+
+export async function getReportDetails(reportId: string): Promise<Report> {
+    return request(api.get(`/admin/reports/${reportId}`));
+}
+
+export async function updateReportStatus(reportId: string, status: string): Promise<Report> {
+    return request(api.put(`/admin/reports/${reportId}/status`, null, { params: { status } }));
+}
+
+export async function resolveReport(reportId: string, data: ResolveReportRequest): Promise<{ message: string; report: Report }> {
+    return request(api.post(`/admin/reports/${reportId}/resolve`, data));
+}
+
+export async function rejectReport(reportId: string, reason?: string): Promise<{ message: string; report: Report }> {
+    return request(api.post(`/admin/reports/${reportId}/reject`, null, { params: { reason } }));
+}
+
+export async function warnReporter(reportId: string, warningMessage: string): Promise<{ message: string }> {
+    return request(api.post(`/admin/reports/${reportId}/warn-reporter`, null, { params: { warningMessage } }));
+}
+
+export async function restrictReporter(reportId: string, reason: string): Promise<{ message: string }> {
+    return request(api.post(`/admin/reports/${reportId}/restrict-reporter`, null, { params: { reason } }));
+}
+
+export async function getReporterStatistics(userId: string): Promise<ReporterStatistics> {
+    return request(api.get(`/admin/reporters/${userId}/statistics`));
+}
+
+export async function getReportStats(): Promise<{
+    total: number;
+    pending: number;
+    underReview: number;
+    resolved: number;
+    rejected: number;
+}> {
+    return request(api.get('/admin/reports/stats'));
+}
+
+export async function getReportsForEntity(entityType: string, entityId: string): Promise<Report[]> {
+    return request(api.get(`/admin/reports/entity/${entityType}/${entityId}`));
+}

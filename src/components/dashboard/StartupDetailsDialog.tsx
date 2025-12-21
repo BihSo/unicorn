@@ -14,6 +14,7 @@ import {
 import { formatDate, cn } from "../../lib/utils"
 import { Startup } from "../../types"
 import { useAuth } from "../../contexts/AuthContext"
+import { toast } from "sonner"
 import { LogOut, Trash2, MoreVertical, UserPlus, Eye } from "lucide-react"
 import { AddMemberDialog } from "./AddMemberDialog"
 import { UserDetailsModal } from "./UserDetailsModal"
@@ -25,9 +26,8 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "../ui/dropdown-menu"
-import { removeStartupMember, unsignStartupMember, leaveStartup, unsignStartup, transferStartupOwnership } from "../../lib/api"
-import { toast } from "sonner"
-import { useState, MouseEvent } from "react"
+import { removeStartupMember, unsignStartupMember, leaveStartup, unsignStartup, transferStartupOwnership, getStartupById } from "../../lib/api"
+import { useState, MouseEvent, useEffect } from "react"
 import {
     AlertDialog,
     AlertDialogAction,
@@ -39,12 +39,14 @@ import {
     AlertDialogTitle,
 } from "../ui/alert-dialog"
 import { fetchStartupModerationLogs, deleteStartupModerationLog, StartupModerationLog } from "../../lib/api"
-import { Loader2, History } from "lucide-react"
+import { Loader2, History, Shield, AlertTriangle } from "lucide-react"
+import { WarnStartupDialog, StartupStatusDialog, DeleteStartupDialog } from "./StartupActionDialogs"
 
 interface StartupDetailsDialogProps {
     open: boolean
     onOpenChange: (open: boolean) => void
-    startup: Startup | null
+    startup?: Startup | null
+    startupId?: string | null
     onTransfer?: (startup: Startup) => void
     onActionComplete?: () => void
 }
@@ -52,11 +54,37 @@ interface StartupDetailsDialogProps {
 export function StartupDetailsDialog({
     open,
     onOpenChange,
-    startup,
+    startup: passedStartup,
+    startupId,
     onTransfer,
     onActionComplete
 }: StartupDetailsDialogProps) {
-    if (!startup) return null
+    const [fetchedStartup, setFetchedStartup] = useState<Startup | null>(null)
+    const [loading, setLoading] = useState(false)
+
+    useEffect(() => {
+        if (open && !passedStartup && startupId) {
+            loadStartup()
+        }
+    }, [open, passedStartup, startupId])
+
+    const loadStartup = async () => {
+        if (!startupId) return
+        setLoading(true)
+        try {
+            const data = await getStartupById(startupId)
+            setFetchedStartup(data)
+        } catch (error) {
+            console.error(error)
+            toast.error("Failed to load startup details")
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    const startup = passedStartup || fetchedStartup
+
+
 
     const { user } = useAuth()
 
@@ -74,6 +102,12 @@ export function StartupDetailsDialog({
         variant: "default"
     })
 
+    // Action Dialog States
+    const [warnDialogOpen, setWarnDialogOpen] = useState(false)
+    const [statusChangeDialogOpen, setStatusChangeDialogOpen] = useState(false)
+    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+
+
     const [isAddMemberOpen, setIsAddMemberOpen] = useState(false)
     const [viewMemberId, setViewMemberId] = useState<string | null>(null)
 
@@ -81,6 +115,20 @@ export function StartupDetailsDialog({
     const [auditLogs, setAuditLogs] = useState<StartupModerationLog[]>([])
     const [loadingLogs, setLoadingLogs] = useState(false)
     const [activeTab, setActiveTab] = useState<'details' | 'history'>('details')
+
+    if (loading) {
+        return (
+            <Dialog open={open} onOpenChange={onOpenChange}>
+                <DialogContent>
+                    <div className="flex justify-center items-center py-10">
+                        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                    </div>
+                </DialogContent>
+            </Dialog>
+        )
+    }
+
+    if (!startup) return null
 
     const loadLogs = async () => {
         if (!startup) return
@@ -304,6 +352,21 @@ export function StartupDetailsDialog({
                             <DialogDescription className="text-base mt-1">
                                 {startup.tagline}
                             </DialogDescription>
+                            <div className="flex items-center gap-2 mt-1">
+                                <code className="text-xs bg-muted px-2 py-0.5 rounded font-mono text-muted-foreground">
+                                    {startup.id}
+                                </code>
+                                <button
+                                    onClick={() => {
+                                        navigator.clipboard.writeText(startup.id);
+                                        toast.success('Startup ID copied to clipboard!');
+                                    }}
+                                    className="text-xs text-primary hover:text-primary/80 transition-colors"
+                                    title="Copy Startup ID"
+                                >
+                                    📋
+                                </button>
+                            </div>
                         </div>
                         <div className="flex gap-2">
                             <div className="flex items-center gap-1 mr-2 border-r pr-2">
@@ -338,6 +401,38 @@ export function StartupDetailsDialog({
                                     <Twitter className="h-4 w-4" />
                                 </Button>
                             </div>
+                            {(user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN') && (
+                                <div className="flex gap-2 items-center">
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-8 w-8 text-yellow-600 hover:text-yellow-700 hover:bg-yellow-50"
+                                        onClick={() => setWarnDialogOpen(true)}
+                                        title="Issue Warning"
+                                    >
+                                        <AlertTriangle className="h-4 w-4" />
+                                    </Button>
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                        onClick={() => setStatusChangeDialogOpen(true)}
+                                        title="Change Status"
+                                    >
+                                        <Shield className="h-4 w-4" />
+                                    </Button>
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                        onClick={() => setDeleteDialogOpen(true)}
+                                        title="Delete Startup"
+                                    >
+                                        <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                </div>
+                            )}
+
                             {startup.websiteUrl && (
                                 <Button
                                     variant="outline"
@@ -713,7 +808,7 @@ export function StartupDetailsDialog({
                                     <div className="divide-y">
                                         {auditLogs.map((log) => (
                                             <div key={log.id} className="p-4 text-sm flex flex-col gap-2 hover:bg-muted/20 relative group">
-                                                <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <div className="absolute top-2 right-2">
                                                     <Button
                                                         variant="ghost"
                                                         size="icon"
@@ -782,17 +877,52 @@ export function StartupDetailsDialog({
                     </AlertDialogContent>
                 </AlertDialog>
 
+                {isAddMemberOpen && (
+                    <AddMemberDialog
+                        open={isAddMemberOpen}
+                        onOpenChange={setIsAddMemberOpen}
+                        startupId={startup.id}
+                        existingMemberIds={startup.members?.map(m => m.userId) || []}
+                        onSuccess={() => {
+                            setIsAddMemberOpen(false)
+                            onActionComplete?.()
+                            if (startupId) loadStartup()
+                        }}
+                    />
+                )}
 
-                <AddMemberDialog
-                    open={isAddMemberOpen}
-                    onOpenChange={setIsAddMemberOpen}
-                    startupId={startup.id}
-                    existingMemberIds={startup.members?.map(m => m.userId) || []}
-                    onSuccess={() => {
-                        onActionComplete?.()
-                    }}
-                />
-
+                {/* Admin Action Dialogs */}
+                {startup && (
+                    <>
+                        <WarnStartupDialog
+                            open={warnDialogOpen}
+                            onOpenChange={setWarnDialogOpen}
+                            startup={startup}
+                            onSuccess={() => {
+                                if (startupId) loadStartup()
+                                onActionComplete?.()
+                            }}
+                        />
+                        <StartupStatusDialog
+                            open={statusChangeDialogOpen}
+                            onOpenChange={setStatusChangeDialogOpen}
+                            startup={startup}
+                            onSuccess={() => {
+                                if (startupId) loadStartup()
+                                onActionComplete?.()
+                            }}
+                        />
+                        <DeleteStartupDialog
+                            open={deleteDialogOpen}
+                            onOpenChange={setDeleteDialogOpen}
+                            startup={startup}
+                            onSuccess={() => {
+                                onOpenChange(false)
+                                onActionComplete?.()
+                            }}
+                        />
+                    </>
+                )}
                 <UserDetailsModal
                     open={!!viewMemberId}
                     onOpenChange={(open) => !open && setViewMemberId(null)}

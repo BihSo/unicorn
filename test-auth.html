@@ -343,6 +343,71 @@
             </form>
             <div id="startupResponse" class="response"></div>
         </div>
+
+        <!-- Reports Card -->
+        <div class="card" id="reportsCard" style="display: none; border-top: 5px solid #e74c3c;">
+            <h2>🚩 نظام الإبلاغات (Reports System)</h2>
+            <div class="info">
+                <strong>اختبار نظام الإبلاغات:</strong> يمكنك الإبلاغ عن مستخدم أو startup
+            </div>
+
+            <form id="reportsForm">
+                <div class="form-group">
+                    <label for="reportType">نوع الإبلاغ (Report Type) *</label>
+                    <select id="reportType" required>
+                        <option value="USER">إبلاغ عن مستخدم (Report User)</option>
+                        <option value="STARTUP">إبلاغ عن Startup (Report Startup)</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="reportEntityId">User/Startup ID (UUID) *</label>
+                    <input type="text" id="reportEntityId" placeholder="Enter UUID of user or startup" required>
+                    <small style="color: #666; font-size: 12px;">💡 يمكنك نسخ ID من response الـ login أو startup
+                        creation</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="reportReason">سبب الإبلاغ (Reason) *</label>
+                    <select id="reportReason" required>
+                        <option value="SPAM">Spam - محتوى ترويجي</option>
+                        <option value="HARASSMENT">Harassment - تحرش أو سلوك مسيء</option>
+                        <option value="INAPPROPRIATE_CONTENT">Inappropriate Content - محتوى غير لائق</option>
+                        <option value="FRAUD">Fraud - احتيال أو معلومات مضللة</option>
+                        <option value="DUPLICATE">Duplicate - حساب مكرر</option>
+                        <option value="COPYRIGHT">Copyright - انتهاك حقوق النشر</option>
+                        <option value="IMPERSONATION">Impersonation - انتحال شخصية</option>
+                        <option value="ADULT_CONTENT">Adult Content - محتوى للكبار فقط</option>
+                        <option value="VIOLENCE">Violence - عنف أو تهديدات</option>
+                        <option value="HATE_SPEECH">Hate Speech - خطاب كراهية</option>
+                        <option value="MISINFORMATION">Misinformation - معلومات خاطئة</option>
+                        <option value="OTHER">Other - سبب آخر</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="reportDescription">تفاصيل الإبلاغ (Description) *</label>
+                    <textarea id="reportDescription" rows="4" required minlength="20" maxlength="2000"
+                        placeholder="اكتب وصفاً تفصيلياً للمخالفة (على الأقل 20 حرف)..."
+                        style="width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 14px;"></textarea>
+                    <small id="charCount" style="color: #666; font-size: 12px;">0/2000 حرف (الحد الأدنى 20)</small>
+                </div>
+
+                <button type="submit" style="background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);">
+                    🚩 إرسال البلاغ
+                </button>
+            </form>
+            <div id="reportsResponse" class="response"></div>
+
+            <!-- Get My Reports Section -->
+            <hr style="margin: 30px 0; border: none; border-top: 2px dashed #e0e0e0;">
+            <h3 style="color: #667eea; margin-bottom: 15px;">📋 بلاغاتي (My Reports)</h3>
+            <button id="getMyReportsBtn" type="button"
+                style="background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);">
+                📊 عرض بلاغاتي
+            </button>
+            <div id="myReportsResponse" class="response"></div>
+        </div>
     </div>
 
     <script>
@@ -480,7 +545,7 @@
             }
         });
 
-        // Login Form Handler
+        // Login Form Handler (Updated to show Reports Card)
         document.getElementById('loginForm').addEventListener('submit', async (e) => {
             e.preventDefault();
 
@@ -488,6 +553,7 @@
             const password = document.getElementById('loginPassword').value;
             const responseDiv = document.getElementById('loginResponse');
             const startupCard = document.getElementById('startupCard');
+            const reportsCard = document.getElementById('reportsCard');
 
             try {
                 const response = await fetch(`${API_URL}/login`, {
@@ -509,8 +575,12 @@
                         <pre>${JSON.stringify(data, null, 2)}</pre>
                         <p style="margin-top: 10px;"><strong>Access Token:</strong> ${data.accessToken}</p>
                         <p><strong>Role:</strong> ${data.role}</p>
+                        <p><strong>User ID:</strong> ${data.userId}</p>
                     `;
                     document.getElementById('loginForm').reset();
+
+                    // Show Reports Card for all users
+                    reportsCard.style.display = 'block';
 
                     // Check Role and Show Startup Card
                     if (data.role === 'STARTUP_OWNER') {
@@ -518,9 +588,7 @@
                         startupCard.scrollIntoView({ behavior: 'smooth' });
                     } else {
                         startupCard.style.display = 'none';
-                        if (data.role === 'INVESTOR') {
-                            alert('⚠️ مرحباً أيها المستثمر! ولكن هذه اللوحة لأصحاب المشاريع فقط.');
-                        }
+                        reportsCard.scrollIntoView({ behavior: 'smooth' });
                     }
 
                 } else {
@@ -588,6 +656,122 @@
                 responseDiv.style.display = 'block';
                 responseDiv.innerHTML = `
                     <strong>❌ فشل إنشاء المشروع</strong>
+                    <p>${error.message}</p>
+                `;
+            }
+        });
+
+        // Character Counter for Report Description
+        document.getElementById('reportDescription')?.addEventListener('input', (e) => {
+            const count = e.target.value.length;
+            const charCountEl = document.getElementById('charCount');
+            if (charCountEl) {
+                charCountEl.textContent = `${count}/2000 حرف (الحد الأدنى 20)`;
+                charCountEl.style.color = count < 20 ? '#e74c3c' : count > 2000 ? '#e74c3c' : '#27ae60';
+            }
+        });
+
+        // Reports Form Handler
+        document.getElementById('reportsForm')?.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            if (!currentAccessToken) {
+                alert('يجب تسجيل الدخول أولاً!');
+                return;
+            }
+
+            const reportType = document.getElementById('reportType').value;
+            const entityId = document.getElementById('reportEntityId').value;
+            const reason = document.getElementById('reportReason').value;
+            const description = document.getElementById('reportDescription').value;
+
+            const responseDiv = document.getElementById('reportsResponse');
+
+            // Determine endpoint
+            const endpoint = reportType === 'USER'
+                ? `http://localhost:9090/api/v1/reports/user/${entityId}`
+                : `http://localhost:9090/api/v1/reports/startup/${entityId}`;
+
+            try {
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${currentAccessToken}`
+                    },
+                    body: JSON.stringify({
+                        reason,
+                        description
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    responseDiv.className = 'response success';
+                    responseDiv.style.display = 'block';
+                    responseDiv.innerHTML = `
+                        <strong>✅ تم إرسال البلاغ بنجاح!</strong>
+                        <p>${data.message || 'Report submitted successfully'}</p>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    `;
+                    document.getElementById('reportsForm').reset();
+                    document.getElementById('charCount').textContent = '0/2000 حرف (الحد الأدنى 20)';
+                } else {
+                    throw new Error(data.message || data.error || JSON.stringify(data) || 'Report submission failed');
+                }
+            } catch (error) {
+                responseDiv.className = 'response error';
+                responseDiv.style.display = 'block';
+                responseDiv.innerHTML = `
+                    <strong>❌ فشل إرسال البلاغ</strong>
+                    <p>${error.message}</p>
+                `;
+            }
+        });
+
+        // Get My Reports Handler
+        document.getElementById('getMyReportsBtn')?.addEventListener('click', async () => {
+            if (!currentAccessToken) {
+                alert('يجب تسجيل الدخول أولاً!');
+                return;
+            }
+
+            const responseDiv = document.getElementById('myReportsResponse');
+
+            try {
+                const response = await fetch('http://localhost:9090/api/v1/reports/my-reports?page=0&size=10', {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${currentAccessToken}`
+                    }
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    responseDiv.className = 'response success';
+                    responseDiv.style.display = 'block';
+
+                    if (data.content && data.content.length > 0) {
+                        responseDiv.innerHTML = `
+                            <strong>✅ البلاغات الخاصة بك (${data.totalElements} إجمالي)</strong>
+                            <pre>${JSON.stringify(data, null, 2)}</pre>
+                        `;
+                    } else {
+                        responseDiv.innerHTML = `
+                            <strong>📭 لا توجد بلاغات</strong>
+                            <p>لم تقم بإرسال أي بلاغات بعد.</p>
+                        `;
+                    }
+                } else {
+                    throw new Error(data.error || 'Failed to fetch reports');
+                }
+            } catch (error) {
+                responseDiv.className = 'response error';
+                responseDiv.style.display = 'block';
+                responseDiv.innerHTML = `
+                    <strong>❌ فشل تحميل البلاغات</strong>
                     <p>${error.message}</p>
                 `;
             }
