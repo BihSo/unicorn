@@ -21,8 +21,6 @@ export interface FilterState {
     firstNameNegate?: boolean
     lastName?: string
     lastNameNegate?: boolean
-    displayName?: string
-    displayNameNegate?: boolean
     country?: string
     countryNegate?: boolean
 
@@ -205,20 +203,6 @@ export function UserFilters({ filters, onFiltersChange, onApply, onClear }: User
                                     placeholder="Search last name..."
                                     value={filters.lastName || ''}
                                     onChange={(e) => updateFilter('lastName', e.target.value || undefined)}
-                                />
-                            </FilterRow>
-
-                            <FilterRow
-                                label="Display Name"
-                                icon={User}
-                                negateValue={filters.displayNameNegate}
-                                onNegateChange={(checked) => updateFilter('displayNameNegate', checked)}
-                                hasValue={!!filters.displayName}
-                            >
-                                <Input
-                                    placeholder="Search name..."
-                                    value={filters.displayName || ''}
-                                    onChange={(e) => updateFilter('displayName', e.target.value || undefined)}
                                 />
                             </FilterRow>
 

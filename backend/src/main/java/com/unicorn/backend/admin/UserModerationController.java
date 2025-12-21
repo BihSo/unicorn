@@ -106,6 +106,23 @@ public class UserModerationController {
         }
 
         /**
+         * Restore a soft-deleted user.
+         * 
+         * POST /api/v1/admin/users/{id}/restore
+         */
+        @PostMapping("/{id}/restore")
+        public ResponseEntity<Map<String, Object>> restoreUser(
+                        @PathVariable UUID id,
+                        @AuthenticationPrincipal User admin) {
+
+                UserModerationLog log = moderationService.restoreUser(id, admin);
+
+                return ResponseEntity.ok(Map.of(
+                                "message", "User restored successfully",
+                                "logId", log.getId().toString()));
+        }
+
+        /**
          * Approve investor for payment.
          *
          * PUT /api/v1/admin/users/{id}/approve-payment
@@ -156,5 +173,27 @@ public class UserModerationController {
                                         "type", "soft",
                                         "logId", log.getId().toString()));
                 }
+        }
+
+        /**
+         * Update user status manually.
+         * 
+         * PUT /api/v1/admin/users/{id}/status
+         */
+        @PutMapping("/{id}/status")
+        public ResponseEntity<Map<String, Object>> updateUserStatus(
+                        @PathVariable UUID id,
+                        @RequestBody Map<String, String> body,
+                        @AuthenticationPrincipal User admin) {
+
+                String status = body.get("status");
+                String reason = body.getOrDefault("reason", "Manual status update by admin");
+
+                UserModerationLog log = moderationService.updateUserStatus(
+                                id, admin, status, reason);
+
+                return ResponseEntity.ok(Map.of(
+                                "message", "User status updated to " + status,
+                                "logId", log.getId().toString()));
         }
 }

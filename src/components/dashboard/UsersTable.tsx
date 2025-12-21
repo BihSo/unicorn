@@ -23,6 +23,8 @@ import { UserDetailsModal } from './UserDetailsModal'
 import { SuspendUserDialog } from './SuspendUserDialog'
 import { WarnUserDialog } from './WarnUserDialog'
 import { DeleteUserDialog } from './DeleteUserDialog'
+import { RestoreUserDialog } from './RestoreUserDialog'
+import { UserStatusDialog } from './UserStatusDialog'
 import { AddAdminDialog } from './AddAdminDialog'
 import { UserFilters, FilterState } from './UserFilters'
 
@@ -43,7 +45,6 @@ interface UserData {
     username: string
     firstName: string | null
     lastName: string | null
-    displayName: string | null
     role: string
     status: string
     authProvider: string
@@ -66,7 +67,6 @@ const EXPORTABLE_COLUMNS = [
     { id: 'username', label: 'Username' },
     { id: 'firstName', label: 'First Name' },
     { id: 'lastName', label: 'Last Name' },
-    { id: 'displayName', label: 'Display Name' },
     { id: 'role', label: 'Role' },
     { id: 'status', label: 'Status' },
     { id: 'authProvider', label: 'Auth Provider' },
@@ -118,6 +118,9 @@ export function UsersTable() {
     const [suspendDialogOpen, setSuspendDialogOpen] = useState(false)
     const [warnDialogOpen, setWarnDialogOpen] = useState(false)
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+    const [restoreDialogOpen, setRestoreDialogOpen] = useState(false)
+    const [statusChangeDialogOpen, setStatusChangeDialogOpen] = useState(false)
+    const [statusChangeInitialStatus, setStatusChangeInitialStatus] = useState<string>('ACTIVE')
     const [addAdminOpen, setAddAdminOpen] = useState(false)
 
     // Export State
@@ -240,10 +243,6 @@ export function UsersTable() {
         if (filterState.lastName) {
             params.append('lastName', filterState.lastName)
             if (filterState.lastNameNegate) params.append('lastNameNegate', 'true')
-        }
-        if (filterState.displayName) {
-            params.append('displayName', filterState.displayName)
-            if (filterState.displayNameNegate) params.append('displayNameNegate', 'true')
         }
         if (filterState.country) {
             params.append('country', filterState.country)
@@ -415,6 +414,21 @@ export function UsersTable() {
         setDeleteDialogOpen(true)
     }
 
+    const handleRestore = (userId: string) => {
+        setSelectedUserId(userId)
+        setRestoreDialogOpen(true)
+    }
+
+    const handleStatusChange = (userId: string) => {
+        // Find user to get current status
+        const user = data.find(u => u.id === userId)
+        if (user) {
+            setStatusChangeInitialStatus(user.status)
+        }
+        setSelectedUserId(userId)
+        setStatusChangeDialogOpen(true)
+    }
+
     const handleActionComplete = () => {
         fetchData()
     }
@@ -521,6 +535,15 @@ export function UsersTable() {
                                     <Button
                                         variant="ghost"
                                         size="sm"
+                                        onClick={() => handleStatusChange(user.id)}
+                                        title="Change Status"
+                                        className="text-blue-500 hover:text-blue-600 hover:bg-blue-500/10"
+                                    >
+                                        <Shield className="h-4 w-4" />
+                                    </Button>
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
                                         onClick={() => handleWarn(user.id)}
                                         title="Issue Warning"
                                         className="text-yellow-500 hover:text-yellow-600 hover:bg-yellow-500/10"
@@ -546,6 +569,17 @@ export function UsersTable() {
                                     >
                                         <Trash2 className="h-4 w-4" />
                                     </Button>
+                                    {user.status === 'DELETED' && (
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => handleRestore(user.id)}
+                                            title="Restore User"
+                                            className="text-green-500 hover:text-green-600 hover:bg-green-500/10"
+                                        >
+                                            <RotateCcw className="h-4 w-4" />
+                                        </Button>
+                                    )}
                                 </>
                             )}
                         </div>
@@ -570,6 +604,13 @@ export function UsersTable() {
 
     return (
         <>
+            <UserStatusDialog
+                open={statusChangeDialogOpen}
+                onOpenChange={setStatusChangeDialogOpen}
+                userId={selectedUserId}
+                currentStatus={statusChangeInitialStatus}
+                onSuccess={handleActionComplete}
+            />
             {/* Advanced Filters Panel */}
             <UserFilters
                 filters={filters}
@@ -866,7 +907,14 @@ export function UsersTable() {
             <AddAdminDialog
                 open={addAdminOpen}
                 onOpenChange={setAddAdminOpen}
-                onSuccess={fetchData}
+                onSuccess={handleActionComplete}
+            />
+
+            <RestoreUserDialog
+                open={restoreDialogOpen}
+                onOpenChange={setRestoreDialogOpen}
+                userId={selectedUserId}
+                onSuccess={handleActionComplete}
             />
         </>
     )

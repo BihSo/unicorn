@@ -14,6 +14,7 @@ public class StartupMember {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "startup_id", nullable = false)
+    @com.fasterxml.jackson.annotation.JsonIgnore
     private Startup startup;
 
     @ManyToOne(fetch = FetchType.LAZY)

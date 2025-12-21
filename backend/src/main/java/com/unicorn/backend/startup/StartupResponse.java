@@ -44,6 +44,8 @@ public class StartupResponse {
 
     private java.util.List<StartupMemberResponse> members;
 
+    private Integer warningCount;
+
     /**
      * Converts a Startup entity to a StartupResponse DTO.
      *
@@ -76,6 +78,7 @@ public class StartupResponse {
                 .ownerRole(startup.getOwnerRole())
                 .createdAt(startup.getCreatedAt())
                 .updatedAt(startup.getUpdatedAt())
+                .warningCount(startup.getWarningCount())
                 .members(startup.getMembers() != null ? startup.getMembers().stream()
                         .map(StartupMemberResponse::fromEntity)
                         .collect(java.util.stream.Collectors.toList())

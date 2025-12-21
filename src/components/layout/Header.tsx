@@ -35,7 +35,7 @@ export function Header() {
                         </div>
                         <div className="hidden md:block text-left">
                             <p className="text-sm font-medium">
-                                {user?.displayName || (user?.firstName ? `${user.firstName} ${user.lastName || ''}` : 'User')}
+                                {user?.firstName ? `${user.firstName} ${user.lastName || ''}` : (user?.username || 'User')}
                             </p>
                             <p className="text-xs text-muted-foreground">{user?.email || 'No email'}</p>
                         </div>

@@ -75,6 +75,18 @@ import { Startup, StartupStats, User } from '../types'
 import { formatCurrency, formatDate, formatNumber } from '../lib/utils'
 import { KPICard } from '../components/dashboard/KPICard'
 
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from "../components/ui/dropdown-menu"
+import { MoreVertical, Shield, AlertTriangle, Trash2 } from "lucide-react"
+import { WarnStartupDialog, StartupStatusDialog, DeleteStartupDialog } from '../components/dashboard/StartupActionDialogs'
+import { useAuth } from '../contexts/AuthContext'
+
 const EXPORTABLE_COLUMNS = [
     { id: 'id', label: 'ID' },
     { id: 'name', label: 'Name' },
@@ -97,6 +109,15 @@ export function StartupRequests() {
     const [pageSize, setPageSize] = useState(20)
     const [totalPages, setTotalPages] = useState(0)
 
+    // Action Dialog States
+    const [actionStartup, setActionStartup] = useState<Startup | null>(null)
+    const [warnDialogOpen, setWarnDialogOpen] = useState(false)
+    const [statusDialogOpen, setStatusDialogOpen] = useState(false)
+    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+
+    const { user } = useAuth()
+    const isAdmin = user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN'
+
     // Filter State
     const [filters, setFilters] = useState<StartupFilterState>({})
     const [appliedFilters, setAppliedFilters] = useState<StartupFilterState>({})
@@ -118,6 +139,8 @@ export function StartupRequests() {
     const [searchingUsers, setSearchingUsers] = useState(false)
     const [transferring, setTransferring] = useState(false)
 
+
+
     // Export State
     const [exportDialogOpen, setExportDialogOpen] = useState(false)
     const [exportScope, setExportScope] = useState<'current' | 'all'>('current')
@@ -125,6 +148,8 @@ export function StartupRequests() {
         EXPORTABLE_COLUMNS.map(col => col.id)
     )
     const [isExporting, setIsExporting] = useState(false)
+
+
 
     // Helper functions for Export Column Selection
     const handleSelectAllColumns = (checked: boolean) => {
@@ -253,6 +278,30 @@ export function StartupRequests() {
         setUserSearchQuery('')
         setSearchResults([])
         setSelectedUser(null)
+    }
+
+    const handleActionComplete = () => {
+        // Refresh the list after moderation action
+        loadData()
+    }
+
+    // Action Handlers
+    const handleWarn = (e: React.MouseEvent, startup: Startup) => {
+        e.stopPropagation()
+        setActionStartup(startup)
+        setWarnDialogOpen(true)
+    }
+
+    const handleStatusChange = (e: React.MouseEvent, startup: Startup) => {
+        e.stopPropagation()
+        setActionStartup(startup)
+        setStatusDialogOpen(true)
+    }
+
+    const handleDelete = (e: React.MouseEvent, startup: Startup) => {
+        e.stopPropagation()
+        setActionStartup(startup)
+        setDeleteDialogOpen(true)
     }
 
     // Export Logic
@@ -488,7 +537,17 @@ export function StartupRequests() {
                                                         </div>
                                                     )}
                                                     <div>
-                                                        <p className="font-semibold text-sm">{startup.name}</p>
+                                                        <div className="flex items-center gap-2">
+                                                            <p className="font-semibold text-sm">{startup.name}</p>
+                                                            {(startup.warningCount || 0) > 0 && (
+                                                                <div className="relative group">
+                                                                    <AlertTriangle className="h-4 w-4 text-amber-500 fill-amber-100 dark:fill-amber-900/30" />
+                                                                    <div className="absolute left-0 bottom-full mb-2 hidden group-hover:block w-32 p-2 bg-popover text-popover-foreground text-xs rounded shadow-lg border z-50">
+                                                                        {startup.warningCount} Warnings Issued
+                                                                    </div>
+                                                                </div>
+                                                            )}
+                                                        </div>
                                                         <div className="flex items-center gap-1 text-xs text-muted-foreground">
                                                             <UserCog className="h-3 w-3" />
                                                             {startup.ownerEmail}
@@ -523,39 +582,60 @@ export function StartupRequests() {
                                                 {formatDate(startup.createdAt)}
                                             </TableCell>
                                             <TableCell className="text-right">
-                                                <div className="flex items-center justify-end gap-1">
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-100 dark:hover:bg-blue-900/50"
-                                                        onClick={() => setViewDialog({ open: true, startup })}
-                                                        title="View Details"
-                                                    >
-                                                        <Eye className="h-4 w-4" />
-                                                    </Button>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        className="h-8 w-8 text-amber-600 hover:text-amber-700 hover:bg-amber-100 dark:hover:bg-amber-900/50"
-                                                        onClick={() => setTransferDialog({ open: true, startup })}
-                                                        title="Transfer Ownership"
-                                                    >
-                                                        <UserCog className="h-4 w-4" />
-                                                    </Button>
-                                                    {startup.websiteUrl && (
+                                                <DropdownMenu>
+                                                    <DropdownMenuTrigger asChild>
                                                         <Button
                                                             variant="ghost"
                                                             size="icon"
-                                                            className="h-8 w-8 text-muted-foreground hover:text-foreground"
-                                                            asChild
-                                                            title="Visit Website"
+                                                            className="h-8 w-8 p-0"
                                                         >
-                                                            <a href={startup.websiteUrl} target="_blank" rel="noopener noreferrer">
-                                                                <Globe className="h-4 w-4" />
-                                                            </a>
+                                                            <span className="sr-only">Open menu</span>
+                                                            <MoreVertical className="h-4 w-4" />
                                                         </Button>
-                                                    )}
-                                                </div>
+                                                    </DropdownMenuTrigger>
+                                                    <DropdownMenuContent align="end">
+                                                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                                        <DropdownMenuItem onClick={() => setViewDialog({ open: true, startup })}>
+                                                            <Eye className="mr-2 h-4 w-4" />
+                                                            View Details
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuItem onClick={() => setTransferDialog({ open: true, startup })}>
+                                                            <UserCog className="mr-2 h-4 w-4" />
+                                                            Transfer Ownership
+                                                        </DropdownMenuItem>
+                                                        {startup.websiteUrl && (
+                                                            <DropdownMenuItem asChild>
+                                                                <a href={startup.websiteUrl} target="_blank" rel="noopener noreferrer">
+                                                                    <Globe className="mr-2 h-4 w-4" />
+                                                                    Visit Website
+                                                                </a>
+                                                            </DropdownMenuItem>
+                                                        )}
+
+                                                        {isAdmin && (
+                                                            <>
+                                                                <DropdownMenuSeparator />
+                                                                <DropdownMenuLabel>Moderation</DropdownMenuLabel>
+                                                                <DropdownMenuItem onClick={(e) => handleStatusChange(e, startup)}>
+                                                                    <Shield className="mr-2 h-4 w-4 text-blue-500" />
+                                                                    Change Status
+                                                                </DropdownMenuItem>
+                                                                <DropdownMenuItem onClick={(e) => handleWarn(e, startup)}>
+                                                                    <AlertTriangle className="mr-2 h-4 w-4 text-yellow-500" />
+                                                                    Issue Warning
+                                                                </DropdownMenuItem>
+                                                                <DropdownMenuSeparator />
+                                                                <DropdownMenuItem
+                                                                    onClick={(e) => handleDelete(e, startup)}
+                                                                    className="text-red-600 focus:text-red-600"
+                                                                >
+                                                                    <Trash2 className="mr-2 h-4 w-4" />
+                                                                    Delete Permanently
+                                                                </DropdownMenuItem>
+                                                            </>
+                                                        )}
+                                                    </DropdownMenuContent>
+                                                </DropdownMenu>
                                             </TableCell>
                                         </TableRow>
                                     ))}
@@ -839,6 +919,30 @@ export function StartupRequests() {
                     fetchStartupStats().then(setStats)
                 }}
             />
+
+            {/* Moderation Dialogs */}
+            {actionStartup && (
+                <>
+                    <WarnStartupDialog
+                        open={warnDialogOpen}
+                        onOpenChange={setWarnDialogOpen}
+                        startup={actionStartup}
+                        onSuccess={handleActionComplete}
+                    />
+                    <StartupStatusDialog
+                        open={statusDialogOpen}
+                        onOpenChange={setStatusDialogOpen}
+                        startup={actionStartup}
+                        onSuccess={handleActionComplete}
+                    />
+                    <DeleteStartupDialog
+                        open={deleteDialogOpen}
+                        onOpenChange={setDeleteDialogOpen}
+                        startup={actionStartup}
+                        onSuccess={handleActionComplete}
+                    />
+                </>
+            )}
         </div >
     )
 }

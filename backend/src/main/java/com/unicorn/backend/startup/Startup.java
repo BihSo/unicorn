@@ -97,6 +97,13 @@ public class Startup {
     @Builder.Default
     private java.util.List<StartupMember> members = new java.util.ArrayList<>();
 
+    @Column(name = "warning_count")
+    @Builder.Default
+    private Integer warningCount = 0;
+
+    @OneToMany(mappedBy = "startup", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private java.util.List<StartupModerationLog> moderationLogs;
+
     @CreationTimestamp
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;

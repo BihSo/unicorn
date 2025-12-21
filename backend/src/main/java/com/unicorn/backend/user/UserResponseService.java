@@ -40,7 +40,6 @@ public class UserResponseService {
                 user.getUsername(),
                 user.getFirstName(),
                 user.getLastName(),
-                user.getDisplayName(),
                 user.getPhoneNumber(),
                 user.getCountry(),
                 user.getAvatarUrl(),

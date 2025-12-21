@@ -222,7 +222,8 @@ export function CreateStartupDialog({
         try {
             setIsSearching(true)
             // Filter by STARTUP_OWNER role as requested
-            const data = await searchUsers(query, 'STARTUP_OWNER')
+            // Enforce ACTIVE status
+            const data = await searchUsers(query, 'STARTUP_OWNER', undefined, 'ACTIVE')
 
             let users = data.content || []
 
@@ -602,12 +603,20 @@ export function CreateStartupDialog({
                                 {memberStartup ? (
                                     <div className="flex items-center justify-between p-3 border rounded-lg bg-background">
                                         <div className="flex items-center gap-3">
-                                            <div className="h-8 w-8 rounded-md bg-blue-100 flex items-center justify-center text-blue-700 font-bold">
-                                                {memberStartup.name.substring(0, 2).toUpperCase()}
-                                            </div>
+                                            {memberStartup.logoUrl ? (
+                                                <img
+                                                    src={memberStartup.logoUrl}
+                                                    alt={memberStartup.name}
+                                                    className="h-10 w-10 rounded-md object-cover border"
+                                                />
+                                            ) : (
+                                                <div className="h-10 w-10 rounded-md bg-blue-100 flex items-center justify-center text-blue-700 font-bold border border-blue-200">
+                                                    {memberStartup.name.substring(0, 2).toUpperCase()}
+                                                </div>
+                                            )}
                                             <div>
                                                 <p className="font-medium text-sm">{memberStartup.name}</p>
-                                                <p className="text-xs text-muted-foreground">{memberStartup.industry}</p>
+                                                <p className="text-xs text-muted-foreground">{memberStartup.industry} • {memberStartup.stage}</p>
                                             </div>
                                         </div>
                                         <Button variant="ghost" size="sm" onClick={() => setMemberStartup(null)}>Change</Button>
@@ -631,11 +640,31 @@ export function CreateStartupDialog({
                                                 {startupSearchResults.map(s => (
                                                     <div
                                                         key={s.id}
-                                                        className="p-3 hover:bg-accent cursor-pointer flex items-center justify-between"
+                                                        className="p-3 hover:bg-accent cursor-pointer flex items-center gap-3 border-b last:border-0"
                                                         onClick={() => selectStartup(s)}
                                                     >
-                                                        <span className="font-medium text-sm">{s.name}</span>
-                                                        <span className="text-xs text-muted-foreground">{s.industry}</span>
+                                                        {/* Startup Logo/Icon */}
+                                                        {s.logoUrl ? (
+                                                            <img
+                                                                src={s.logoUrl}
+                                                                alt={s.name}
+                                                                className="h-9 w-9 rounded-md object-cover border"
+                                                            />
+                                                        ) : (
+                                                            <div className="h-9 w-9 rounded-md bg-primary/10 flex items-center justify-center shrink-0 border border-primary/20">
+                                                                <Building2 className="h-5 w-5 text-primary" />
+                                                            </div>
+                                                        )}
+
+                                                        {/* Startup Details */}
+                                                        <div className="min-w-0 flex-1">
+                                                            <p className="font-medium text-sm truncate">{s.name}</p>
+                                                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                                                <span className="truncate">{s.industry}</span>
+                                                                <span className="w-1 h-1 rounded-full bg-muted-foreground/50" />
+                                                                <span className="truncate">{s.stage}</span>
+                                                            </div>
+                                                        </div>
                                                     </div>
                                                 ))}
                                             </div>

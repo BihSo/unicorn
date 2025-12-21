@@ -101,18 +101,22 @@ public class UserModerationService {
                 String previousStatus = user.getStatus();
 
                 // Set suspension details on user
-                user.setStatus("SUSPENDED");
+                // Set suspension details on user
+                if (request.isPermanent()) {
+                        user.setStatus("BANNED");
+                        user.setSuspendedUntil(null); // Permanent has no expiry
+                } else {
+                        user.setStatus("SUSPENDED");
+                        if (request.getDurationDays() != null) {
+                                user.setSuspendedUntil(LocalDateTime.now().plusDays(request.getDurationDays()));
+                        } else if (request.getExpiresAt() != null) {
+                                user.setSuspendedUntil(request.getExpiresAt());
+                        }
+                }
+
                 user.setSuspendedAt(LocalDateTime.now());
                 user.setSuspendReason(request.getReason());
                 user.setSuspensionType(request.isPermanent() ? "PERMANENT" : "TEMPORARY");
-
-                if (!request.isPermanent() && request.getDurationDays() != null) {
-                        user.setSuspendedUntil(LocalDateTime.now().plusDays(request.getDurationDays()));
-                } else if (!request.isPermanent() && request.getExpiresAt() != null) {
-                        user.setSuspendedUntil(request.getExpiresAt());
-                } else if (request.isPermanent()) {
-                        user.setSuspendedUntil(null); // Permanent has no expiry
-                }
 
                 userRepository.save(user);
 
@@ -132,7 +136,7 @@ public class UserModerationService {
                                 .durationType(request.isPermanent() ? "PERMANENT" : "TEMPORARY")
                                 .expiresAt(user.getSuspendedUntil())
                                 .previousStatus(previousStatus)
-                                .newStatus("SUSPENDED")
+                                .newStatus(request.isPermanent() ? "BANNED" : "SUSPENDED")
                                 .isActive(true)
                                 .build();
 
@@ -283,6 +287,48 @@ public class UserModerationService {
         }
 
         /**
+         * Restore a soft-deleted user.
+         */
+        @Transactional
+        public UserModerationLog restoreUser(UUID userId, User adminUser) {
+                User user = userRepository.findById(userId)
+                                .orElseThrow(() -> new RuntimeException("User not found: " + userId));
+
+                // Super Admin check
+                if (("ADMIN".equals(user.getRole()) || "SUPER_ADMIN".equals(user.getRole()))
+                                && !"SUPER_ADMIN".equals(adminUser.getRole())) {
+                        throw new org.springframework.security.access.AccessDeniedException(
+                                        "Only Super Admins can restore other Admins");
+                }
+
+                if (!"DELETED".equals(user.getStatus())) {
+                        throw new RuntimeException("User is not deleted");
+                }
+
+                String previousStatus = user.getStatus();
+
+                // Restore user to ACTIVE
+                user.setStatus("ACTIVE");
+                user.setDeletedAt(null);
+                user.setDeletionReason(null);
+                userRepository.save(user);
+
+                // Create restore log
+                UserModerationLog log = UserModerationLog.builder()
+                                .user(user)
+                                .adminId(adminUser.getId())
+                                .adminEmail(adminUser.getEmail())
+                                .actionType(ModerationActionType.RESTORE)
+                                .reason("Restored by admin")
+                                .previousStatus(previousStatus)
+                                .newStatus("ACTIVE")
+                                .isActive(true)
+                                .build();
+
+                return moderationLogRepository.save(log);
+        }
+
+        /**
          * Hard delete a user - permanently removes from database.
          * User can register again with same email.
          */
@@ -321,5 +367,77 @@ public class UserModerationService {
                 return logs.stream()
                                 .map(ModerationLogResponse::fromEntity)
                                 .toList();
+        }
+
+        /**
+         * Generic method to update user status manually.
+         * Handles clearing suspension fields if moving to ACTIVE.
+         */
+        @Transactional
+        public UserModerationLog updateUserStatus(UUID userId, User adminUser, String newStatus, String reason) {
+                User user = userRepository.findById(userId)
+                                .orElseThrow(() -> new RuntimeException("User not found: " + userId));
+
+                // Super Admin check
+                if (("ADMIN".equals(user.getRole()) || "SUPER_ADMIN".equals(user.getRole()))
+                                && !"SUPER_ADMIN".equals(adminUser.getRole())) {
+                        throw new org.springframework.security.access.AccessDeniedException(
+                                        "Only Super Admins can manage other Admins");
+                }
+
+                String previousStatus = user.getStatus();
+
+                // Don't do anything if status is same
+                if (previousStatus.equals(newStatus)) {
+                        throw new RuntimeException("User is already " + newStatus);
+                }
+
+                user.setStatus(newStatus);
+
+                // Handle specific status logic
+                if ("ACTIVE".equals(newStatus)) {
+                        // Clear suspension/deletion fields
+                        user.setSuspendedAt(null);
+                        user.setSuspendReason(null);
+                        user.setSuspendedUntil(null);
+                        user.setSuspensionType(null);
+                        user.setDeletedAt(null);
+                        user.setDeletionReason(null);
+                } else if ("SUSPENDED".equals(newStatus)) {
+                        user.setSuspendedAt(LocalDateTime.now());
+                        user.setSuspendReason(reason);
+                        user.setSuspensionType("MANUAL");
+                        // No specific end date for manual simple suspension, or we could set default
+                } else if ("BANNED".equals(newStatus)) {
+                        user.setSuspendedAt(LocalDateTime.now());
+                        user.setSuspendReason(reason);
+                        user.setSuspensionType("PERMANENT");
+                        user.setSuspendedUntil(null);
+                } else if ("DELETED".equals(newStatus)) {
+                        user.setDeletedAt(LocalDateTime.now());
+                        user.setDeletionReason(reason);
+                }
+
+                userRepository.save(user);
+
+                // Revoke access if not ACTIVE
+                if (!"ACTIVE".equals(newStatus)) {
+                        refreshTokenRepository.deleteByUserId(userId);
+                        tokenBlacklistService.revokeUserAccess(userId.toString());
+                }
+
+                // Log the change
+                UserModerationLog log = UserModerationLog.builder()
+                                .user(user)
+                                .adminId(adminUser.getId())
+                                .adminEmail(adminUser.getEmail())
+                                .actionType(ModerationActionType.STATUS_CHANGE)
+                                .reason(reason)
+                                .previousStatus(previousStatus)
+                                .newStatus(newStatus)
+                                .isActive(true)
+                                .build();
+
+                return moderationLogRepository.save(log);
         }
 }

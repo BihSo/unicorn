@@ -78,7 +78,8 @@ export function AddMemberDialog({
         setIsSearching(true)
         try {
             // Filter by STARTUP_OWNER role as requested (User referred to "Business Owner")
-            const response = await searchUsers(query, "STARTUP_OWNER")
+            // Also enforce ACTIVE status
+            const response = await searchUsers(query, "STARTUP_OWNER", undefined, "ACTIVE")
             // Filter out existing members
             const filteredUsers = response.content.filter(user => !existingMemberIds.includes(user.id))
             setSearchResults(filteredUsers)

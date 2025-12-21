@@ -35,7 +35,7 @@ interface UserDetails {
     username?: string
     firstName?: string
     lastName?: string
-    displayName?: string
+
     phoneNumber?: string
     country?: string
     avatarUrl?: string
@@ -254,8 +254,8 @@ export function UserDetailsModal({ userId, open, onOpenChange, onAction }: UserD
                                 {/* Avatar with status indicator */}
                                 <div className="relative">
                                     <img
-                                        src={userDetails.avatarUrl || `https://api.dicebear.com/7.x/initials/svg?seed=${userDetails.email}`}
-                                        alt={userDetails.displayName || userDetails.email}
+                                        src={userDetails.avatarUrl || "/avatars/avatar_1.png"}
+                                        alt={userDetails.email}
                                         className="h-16 w-16 rounded-full border-2 border-primary/20"
                                     />
                                     <div className={`absolute -bottom-0.5 -right-0.5 h-4 w-4 rounded-full border-2 border-background ring-1 ring-background ${userDetails.hasActiveSession ? 'bg-green-500' : 'bg-gray-300'
@@ -263,7 +263,7 @@ export function UserDetailsModal({ userId, open, onOpenChange, onAction }: UserD
                                 </div>
                                 <div>
                                     <h3 className="text-lg font-bold">
-                                        {userDetails.displayName || userDetails.email.split('@')[0]}
+                                        {userDetails.firstName ? `${userDetails.firstName} ${userDetails.lastName}` : userDetails.email.split('@')[0]}
                                     </h3>
                                     <p className="text-sm text-muted-foreground">{userDetails.email}</p>
                                     <div className="flex items-center gap-2 mt-1">

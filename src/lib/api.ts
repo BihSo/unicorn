@@ -7,6 +7,8 @@ import { Startup, StartupStats, User } from '../types';
 import api from './axios';
 import { AxiosResponse } from 'axios';
 
+export { api };
+
 // Helper to extract data and handle errors consistently
 const request = async <T>(promise: Promise<AxiosResponse<T>>): Promise<T> => {
     try {
@@ -241,19 +243,39 @@ export async function deleteStartup(id: string): Promise<void> {
     return request(api.delete(`/admin/startups/${id}`));
 }
 
+export interface StartupModerationLog {
+    id: string;
+    adminId: string;
+    adminEmail: string;
+    actionType: string;
+    reason?: string;
+    newStatus?: string;
+    previousStatus?: string;
+    createdAt: string;
+}
+
+export async function fetchStartupModerationLogs(startupId: string): Promise<StartupModerationLog[]> {
+    return request(api.get(`/admin/startups/${startupId}/audit-logs`));
+}
+
 // ==================== User API ====================
 
 // User interface imported from types
 
-export async function searchUsers(query: string, role?: string, roleNegate?: boolean): Promise<{ content: User[] }> {
+export async function searchUsers(query: string, role?: string, roleNegate?: boolean, status?: string): Promise<{ content: User[] }> {
     const params: any = {
         query,
         size: 10
     };
     if (role) params.role = role;
     if (roleNegate) params.roleNegate = true;
+    if (status) params.status = status;
 
     return request(api.get('/admin/users', { params }));
+}
+
+export async function restoreUser(id: string): Promise<{ message: string }> {
+    return request(api.post(`/admin/users/${id}/restore`));
 }
 
 export async function updatePreferredCurrency(currency: string): Promise<void> {

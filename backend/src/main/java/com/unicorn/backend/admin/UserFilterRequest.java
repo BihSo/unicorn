@@ -33,9 +33,6 @@ public class UserFilterRequest {
     private String lastName;
     private Boolean lastNameNegate;
 
-    private String displayName;
-    private Boolean displayNameNegate;
-
     private String phoneNumber;
     private Boolean phoneNumberNegate;
 
@@ -95,7 +92,7 @@ public class UserFilterRequest {
      */
     public boolean hasAnyFilter() {
         return email != null || username != null || firstName != null || lastName != null ||
-                displayName != null || phoneNumber != null || country != null ||
+                phoneNumber != null || country != null ||
                 role != null || status != null || authProvider != null || suspensionType != null ||
                 createdAtFrom != null || createdAtTo != null ||
                 lastLoginFrom != null || lastLoginTo != null ||

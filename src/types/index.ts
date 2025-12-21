@@ -50,6 +50,7 @@ export interface Startup {
     ownerRole?: StartupRole;
     createdAt: string;
     updatedAt: string;
+    warningCount?: number;
     members: StartupMember[];
 }
 
@@ -77,7 +78,6 @@ export interface User {
     lastName?: string;
     avatarUrl?: string;
     username?: string;
-    displayName?: string;
     authProvider?: string;
     phoneNumber?: string;
     country?: string;

@@ -6,43 +6,39 @@ import java.util.Random;
 import java.util.UUID;
 
 /**
- * Service for generating and managing user avatars using DiceBear API.
+ * Service for generating and managing user avatars using local assets.
  */
 @Service
 public class AvatarService {
 
     private static final List<String> DEFAULT_AVATARS = List.of(
-            "https://api.dicebear.com/7.x/avataaars/svg?seed=",
-            "https://api.dicebear.com/7.x/personas/svg?seed="
-            // "https://api.dicebear.com/7.x/initials/svg?seed=",
-            // "https://api.dicebear.com/7.x/bottts/svg?seed=",
-            // "https://api.dicebear.com/7.x/identicon/svg?seed="
-        );
+            "/avatars/avatar_1.png",
+            "/avatars/avatar_2.png",
+            "/avatars/avatar_3.png",
+            "/avatars/avatar_4.png");
 
     private final Random random = new Random();
 
     /**
      * Generate a deterministic avatar URL based on user ID.
-     * Same user ID will always get the same avatar style and seed.
+     * Same user ID will always get the same avatar style.
      *
      * @param userId the user's unique identifier
-     * @return avatar URL from DiceBear API
+     * @return avatar URL (local path)
      */
     public String getRandomAvatar(UUID userId) {
         long seed = userId.getMostSignificantBits() ^ userId.getLeastSignificantBits();
         Random seededRandom = new Random(seed);
-        String avatarBase = DEFAULT_AVATARS.get(seededRandom.nextInt(DEFAULT_AVATARS.size()));
-        return avatarBase + userId.toString();
+        return DEFAULT_AVATARS.get(seededRandom.nextInt(DEFAULT_AVATARS.size()));
     }
 
     /**
      * Generate a random avatar URL (non-deterministic).
      *
-     * @return random avatar URL from DiceBear API
+     * @return random avatar URL (local path)
      */
     public String getRandomAvatar() {
-        String avatarBase = DEFAULT_AVATARS.get(random.nextInt(DEFAULT_AVATARS.size()));
-        return avatarBase + UUID.randomUUID().toString();
+        return DEFAULT_AVATARS.get(random.nextInt(DEFAULT_AVATARS.size()));
     }
 
     /**

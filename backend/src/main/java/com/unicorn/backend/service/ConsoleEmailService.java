@@ -16,4 +16,13 @@ public class ConsoleEmailService implements EmailService {
         logger.info("OTP CODE: {}", otp);
         logger.info("========================================");
     }
+
+    @Override
+    public void sendGenericEmail(String to, String subject, String body) {
+        logger.info("========================================");
+        logger.info("EMAIL MOCK - Sending Email to: {}", to);
+        logger.info("Subject: {}", subject);
+        logger.info("Body: {}", body);
+        logger.info("========================================");
+    }
 }

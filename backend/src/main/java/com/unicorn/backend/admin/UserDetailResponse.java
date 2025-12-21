@@ -31,12 +31,12 @@ public class UserDetailResponse {
         private String username;
         private String firstName;
         private String lastName;
-        private String displayName;
         private String phoneNumber;
         private String country;
         private String role;
         private String status;
         private String authProvider;
+        private String avatarUrl;
 
         private String bio;
         private String linkedInUrl;
@@ -151,7 +151,7 @@ public class UserDetailResponse {
                                 .username(user.getUsername())
                                 .firstName(user.getFirstName())
                                 .lastName(user.getLastName())
-                                .displayName(user.getDisplayName())
+                                .avatarUrl(user.getAvatarUrl())
                                 .phoneNumber(user.getPhoneNumber())
                                 .country(user.getCountry())
                                 .role(user.getRole())

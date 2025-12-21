@@ -40,6 +40,10 @@ public class StartupService {
                     .orElseThrow(() -> new IllegalArgumentException("Owner not found with ID: " + request.ownerId()));
         }
 
+        if (!"ACTIVE".equalsIgnoreCase(owner.getStatus())) {
+            throw new AccessDeniedException("User must be ACTIVE to own a startup.");
+        }
+
         Startup startup = Startup.builder()
                 .name(request.name())
                 .tagline(request.tagline())
@@ -95,6 +99,10 @@ public class StartupService {
         // Validate ownership
         if (!isAdmin && !startup.getOwner().getId().equals(user.getId())) {
             throw new AccessDeniedException("You do not have permission to update this startup");
+        }
+
+        if (!isAdmin && !"ACTIVE".equalsIgnoreCase(user.getStatus())) {
+            throw new AccessDeniedException("Your account is not ACTIVE.");
         }
 
         // Update fields if provided in request
@@ -203,6 +211,10 @@ public class StartupService {
      */
     @Transactional
     public StartupResponse transferOwnership(UUID id, User newOwner) {
+        if (!"ACTIVE".equalsIgnoreCase(newOwner.getStatus())) {
+            throw new IllegalArgumentException("New owner must be ACTIVE.");
+        }
+
         Startup startup = startupRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Startup not found: " + id));
 
@@ -312,6 +324,10 @@ public class StartupService {
 
         if (!isAdmin && !isOwner) {
             throw new AccessDeniedException("Only the owner or admin can add members.");
+        }
+
+        if (!"ACTIVE".equalsIgnoreCase(userToAdd.getStatus())) {
+            throw new IllegalArgumentException("Cannot add a user who is not ACTIVE.");
         }
 
         // Check if already a member

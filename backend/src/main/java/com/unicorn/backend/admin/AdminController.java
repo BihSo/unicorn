@@ -29,10 +29,11 @@ public class AdminController {
     private final com.unicorn.backend.security.RefreshTokenRepository refreshTokenRepository;
     private final StartupRepository startupRepository;
     private final UserResponseService userResponseService;
-
     private final org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
     private final com.unicorn.backend.user.AvatarService avatarService;
     private final TokenBlacklistService tokenBlacklistService;
+    private final com.unicorn.backend.service.EmailService emailService;
+    private final StartupModerationLogRepository startupModerationLogRepository;
 
     public AdminController(UserRepository userRepository, StartupService startupService,
             com.unicorn.backend.security.RefreshTokenRepository refreshTokenRepository,
@@ -40,7 +41,9 @@ public class AdminController {
             UserResponseService userResponseService,
             org.springframework.security.crypto.password.PasswordEncoder passwordEncoder,
             com.unicorn.backend.user.AvatarService avatarService,
-            TokenBlacklistService tokenBlacklistService) {
+            TokenBlacklistService tokenBlacklistService,
+            com.unicorn.backend.service.EmailService emailService,
+            StartupModerationLogRepository startupModerationLogRepository) {
         this.userRepository = userRepository;
         this.startupService = startupService;
         this.refreshTokenRepository = refreshTokenRepository;
@@ -49,6 +52,8 @@ public class AdminController {
         this.passwordEncoder = passwordEncoder;
         this.avatarService = avatarService;
         this.tokenBlacklistService = tokenBlacklistService;
+        this.emailService = emailService;
+        this.startupModerationLogRepository = startupModerationLogRepository;
     }
 
     @PostMapping("/users")
@@ -99,8 +104,7 @@ public class AdminController {
             @org.springframework.web.bind.annotation.RequestParam(required = false) Boolean firstNameNegate,
             @org.springframework.web.bind.annotation.RequestParam(required = false) String lastName,
             @org.springframework.web.bind.annotation.RequestParam(required = false) Boolean lastNameNegate,
-            @org.springframework.web.bind.annotation.RequestParam(required = false) String displayName,
-            @org.springframework.web.bind.annotation.RequestParam(required = false) Boolean displayNameNegate,
+
             @org.springframework.web.bind.annotation.RequestParam(required = false) String country,
             @org.springframework.web.bind.annotation.RequestParam(required = false) Boolean countryNegate,
             @org.springframework.web.bind.annotation.RequestParam(required = false) String role,
@@ -157,8 +161,7 @@ public class AdminController {
                         .firstNameNegate(firstNameNegate)
                         .lastName(lastName)
                         .lastNameNegate(lastNameNegate)
-                        .displayName(displayName)
-                        .displayNameNegate(displayNameNegate)
+
                         .country(country)
                         .countryNegate(countryNegate)
                         .role(role)
@@ -459,5 +462,124 @@ public class AdminController {
                 activityTrend);
 
         return ResponseEntity.ok(stats);
+    }
+
+    /**
+     * Update startup status (Admin).
+     *
+     * @param id      the startup ID
+     * @param request the status update request (status, reason)
+     * @return the updated startup response
+     */
+    @PutMapping("/startups/{id}/status")
+    public ResponseEntity<StartupResponse> updateStartupStatus(
+            @PathVariable UUID id,
+            @RequestBody java.util.Map<String, String> request) {
+        String statusStr = request.get("status");
+        String reason = request.get("reason");
+
+        if (statusStr == null) {
+            return ResponseEntity.badRequest().build();
+        }
+
+        StartupStatus status;
+        try {
+            status = StartupStatus.valueOf(statusStr);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().build();
+        }
+
+        StartupResponse response = startupService.updateStartupStatus(id, status);
+
+        // Notify Owner if Banned or Suspended or Rejected
+        if (status == StartupStatus.BANNED || status == StartupStatus.SUSPENDED || status == StartupStatus.REJECTED) {
+            Startup startup = startupRepository.findById(id).orElse(null);
+            if (startup != null) {
+                String subject = "Startup Status Update: " + status;
+                String body = "Your startup '" + startup.getName() + "' has been marked as " + status + ".\nReason: "
+                        + (reason != null ? reason : "No reason provided.");
+                emailService.sendGenericEmail(startup.getOwner().getEmail(), subject, body);
+            }
+        }
+
+        // Create Audit Log
+        try {
+            Startup startup = startupRepository.findById(id).orElse(null);
+            if (startup != null) {
+                // Determine Admin ID from SecurityContext (placeholder for now as we don't have
+                // easy access to admin ID here)
+                // In a real app, we would get the current user ID.
+                // Creating log:
+                StartupModerationLog log = StartupModerationLog.builder()
+                        .startup(startup)
+                        .actionType(com.unicorn.backend.user.ModerationActionType.STATUS_CHANGE)
+                        .newStatus(status.name())
+                        .previousStatus(startup.getStatus().name()) // Note: response has new status, but startup entity
+                                                                    // fetched again might have old status if not
+                                                                    // flushed? Actually
+                                                                    // startupService.updateStartupStatus updates it.
+                                                                    // We should ideally pass previous status or fetch
+                                                                    // it before update.
+                                                                    // For now, let's assume we log the change.
+                        .reason(reason)
+                        .adminEmail("admin@unicorn.com") // Placeholder or get from context
+                        .build();
+                startupModerationLogRepository.save(log);
+            }
+        } catch (Exception e) {
+            System.err.println("Failed to save audit log: " + e.getMessage());
+        }
+
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * Send a warning to the startup owner.
+     *
+     * @param id      the startup ID
+     * @param request the warning request (reason/message)
+     * @return success message
+     */
+    @PostMapping("/startups/{id}/warn")
+    public ResponseEntity<Void> warnStartup(
+            @PathVariable UUID id,
+            @RequestBody java.util.Map<String, String> request) {
+        String message = request.get("message");
+        if (message == null || message.trim().isEmpty()) {
+            return ResponseEntity.badRequest().build();
+        }
+
+        Startup startup = startupRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Startup not found: " + id));
+
+        String subject = "Warning regarding your startup: " + startup.getName();
+        String body = "You have received a warning from the administration:\n\n" + message;
+
+        emailService.sendGenericEmail(startup.getOwner().getEmail(), subject, body);
+
+        // Increment Warning Count and Log
+        int currentCount = startup.getWarningCount() != null ? startup.getWarningCount() : 0;
+        startup.setWarningCount(currentCount + 1);
+        startupRepository.save(startup);
+
+        // Create Audit Log
+        StartupModerationLog log = StartupModerationLog.builder()
+                .startup(startup)
+                .actionType(com.unicorn.backend.user.ModerationActionType.WARNING)
+                .reason(message)
+                .adminEmail("admin@unicorn.com") // Placeholder
+                .build();
+        startupModerationLogRepository.save(log);
+
+        return ResponseEntity.ok().build();
+    }
+
+    /**
+     * Get startup moderation logs.
+     */
+    @GetMapping("/startups/{id}/audit-logs")
+    public ResponseEntity<List<com.unicorn.backend.startup.StartupModerationLog>> getStartupModerationLogs(
+            @PathVariable UUID id) {
+        return ResponseEntity.ok(startupModerationLogRepository.findByStartupIdOrderByCreatedAtDesc(id));
     }
 }

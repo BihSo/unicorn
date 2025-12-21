@@ -8,5 +8,7 @@ public enum StartupStatus {
     APPROVED, // Startup is live and visible
     ACTIVE, // Alias/Same as APPROVED
     REJECTED,
-    ARCHIVED
+    ARCHIVED,
+    SUSPENDED,
+    BANNED
 }

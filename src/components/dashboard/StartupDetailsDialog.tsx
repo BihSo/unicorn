@@ -38,6 +38,8 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "../ui/alert-dialog"
+import { fetchStartupModerationLogs, StartupModerationLog } from "../../lib/api"
+import { Loader2, History } from "lucide-react"
 
 interface StartupDetailsDialogProps {
     open: boolean
@@ -74,6 +76,30 @@ export function StartupDetailsDialog({
 
     const [isAddMemberOpen, setIsAddMemberOpen] = useState(false)
     const [viewMemberId, setViewMemberId] = useState<string | null>(null)
+
+    // Audit Logs State
+    const [auditLogs, setAuditLogs] = useState<StartupModerationLog[]>([])
+    const [loadingLogs, setLoadingLogs] = useState(false)
+    const [activeTab, setActiveTab] = useState<'details' | 'history'>('details')
+
+    const loadLogs = async () => {
+        if (!startup) return
+        try {
+            setLoadingLogs(true)
+            const logs = await fetchStartupModerationLogs(startup.id)
+            setAuditLogs(logs)
+        } catch (error) {
+            console.error(error)
+            toast.error("Failed to load audit logs")
+        } finally {
+            setLoadingLogs(false)
+        }
+    }
+
+    // Reset tab when dialog opens
+    if (open && activeTab === 'history' && !startup) {
+        setActiveTab('details')
+    }
 
     // Check membership status
     const currentMember = startup?.members?.find(m => m.userId === user?.id)
@@ -339,285 +365,367 @@ export function StartupDetailsDialog({
                         </div>
                     </div>
 
-                    <div className="space-y-6">
-                        {/* Metrics Grid */}
-                        <div className="grid grid-cols-3 gap-4">
-                            <div className="p-4 rounded-lg bg-muted/50 border relative overflow-hidden group">
-                                <p className="text-xs font-medium text-muted-foreground uppercase z-10 relative">Funding Goal</p>
-                                <p className="text-xl font-bold mt-1 z-10 relative">{formatCurrency(startup.fundingGoal)}</p>
-                                <div className="absolute right-2 top-2 opacity-10 group-hover:opacity-20 transition-opacity">
-                                    <Target className="h-8 w-8" />
-                                </div>
-                            </div>
-                            <div className="p-4 rounded-lg bg-emerald-500/10 border border-emerald-500/20 relative overflow-hidden">
-                                <div className="flex justify-between items-start mb-1">
-                                    <p className="text-xs font-medium text-emerald-600 uppercase">Raised</p>
-                                    <TrendingUp className="h-4 w-4 text-emerald-600" />
-                                </div>
-                                <p className="text-xl font-bold text-emerald-700">{formatCurrency(startup.raisedAmount)}</p>
-                                {/* Progress Bar */}
-                                <div className="w-full bg-emerald-200/50 h-1.5 rounded-full mt-3 overflow-hidden">
-                                    <div
-                                        className="bg-emerald-500 h-full rounded-full transition-all duration-500"
-                                        style={{ width: `${Math.min(((startup.raisedAmount || 0) / (startup.fundingGoal || 1)) * 100, 100)}%` }}
-                                    />
-                                </div>
-                                <p className="text-[10px] text-emerald-600/80 mt-1 font-medium text-right">
-                                    {Math.round(((startup.raisedAmount || 0) / (startup.fundingGoal || 1)) * 100)}% Funded
-                                </p>
-                            </div>
-                            <div className="p-4 rounded-lg bg-muted/50 border">
-                                <p className="text-xs font-medium text-muted-foreground uppercase">Stage</p>
-                                <div className="mt-1">{getStageBadge(startup.stage)}</div>
-                            </div>
-                        </div>
+                    {/* Tabs Navigation */}
+                    <div className="flex items-center gap-6 border-b mb-6">
+                        <button
+                            onClick={() => setActiveTab('details')}
+                            className={cn(
+                                "pb-2 text-sm font-medium transition-colors relative px-1",
+                                activeTab === 'details' ? "text-primary border-b-2 border-primary" : "text-muted-foreground hover:text-foreground"
+                            )}
+                        >
+                            Overview
+                        </button>
+                        {(user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN') && (
+                            <button
+                                onClick={() => {
+                                    setActiveTab('history');
+                                    loadLogs();
+                                }}
+                                className={cn(
+                                    "pb-2 text-sm font-medium transition-colors relative px-1 flex items-center gap-2",
+                                    activeTab === 'history' ? "text-primary border-b-2 border-primary" : "text-muted-foreground hover:text-foreground"
+                                )}
+                            >
+                                <History className="h-4 w-4" />
+                                Moderation History
+                            </button>
+                        )}
+                    </div>
 
-                        {/* Info Grid */}
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <div className="p-3 rounded-xl border bg-card text-card-foreground shadow-sm flex items-start gap-3">
-                                <div className="p-2 bg-blue-500/10 rounded-lg text-blue-600 mt-0.5">
-                                    <Layers className="h-4 w-4" />
+                    {activeTab === 'details' && (
+                        <div className="space-y-6">
+                            {/* Metrics Grid */}
+                            <div className="grid grid-cols-3 gap-4">
+                                <div className="p-4 rounded-lg bg-muted/50 border relative overflow-hidden group">
+                                    <p className="text-xs font-medium text-muted-foreground uppercase z-10 relative">Funding Goal</p>
+                                    <p className="text-xl font-bold mt-1 z-10 relative">{formatCurrency(startup.fundingGoal)}</p>
+                                    <div className="absolute right-2 top-2 opacity-10 group-hover:opacity-20 transition-opacity">
+                                        <Target className="h-8 w-8" />
+                                    </div>
                                 </div>
+                                <div className="p-4 rounded-lg bg-emerald-500/10 border border-emerald-500/20 relative overflow-hidden">
+                                    <div className="flex justify-between items-start mb-1">
+                                        <p className="text-xs font-medium text-emerald-600 uppercase">Raised</p>
+                                        <TrendingUp className="h-4 w-4 text-emerald-600" />
+                                    </div>
+                                    <p className="text-xl font-bold text-emerald-700">{formatCurrency(startup.raisedAmount)}</p>
+                                    {/* Progress Bar */}
+                                    <div className="w-full bg-emerald-200/50 h-1.5 rounded-full mt-3 overflow-hidden">
+                                        <div
+                                            className="bg-emerald-500 h-full rounded-full transition-all duration-500"
+                                            style={{ width: `${Math.min(((startup.raisedAmount || 0) / (startup.fundingGoal || 1)) * 100, 100)}%` }}
+                                        />
+                                    </div>
+                                    <p className="text-[10px] text-emerald-600/80 mt-1 font-medium text-right">
+                                        {Math.round(((startup.raisedAmount || 0) / (startup.fundingGoal || 1)) * 100)}% Funded
+                                    </p>
+                                </div>
+                                <div className="p-4 rounded-lg bg-muted/50 border">
+                                    <p className="text-xs font-medium text-muted-foreground uppercase">Stage</p>
+                                    <div className="mt-1">{getStageBadge(startup.stage)}</div>
+                                </div>
+                            </div>
+
+                            {/* Info Grid */}
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div className="p-3 rounded-xl border bg-card text-card-foreground shadow-sm flex items-start gap-3">
+                                    <div className="p-2 bg-blue-500/10 rounded-lg text-blue-600 mt-0.5">
+                                        <Layers className="h-4 w-4" />
+                                    </div>
+                                    <div>
+                                        <p className="text-xs font-medium text-muted-foreground">Industry</p>
+                                        <p className="font-semibold mt-0.5">{startup.industry}</p>
+                                    </div>
+                                </div>
+
+
+
+                                <div className="p-3 rounded-xl border bg-card text-card-foreground shadow-sm flex items-start gap-3">
+                                    <div className="p-2 bg-orange-500/10 rounded-lg text-orange-600 mt-0.5">
+                                        <Calendar className="h-4 w-4" />
+                                    </div>
+                                    <div>
+                                        <p className="text-xs font-medium text-muted-foreground">Created</p>
+                                        <p className="font-semibold mt-0.5">{formatDate(startup.createdAt)}</p>
+                                    </div>
+                                </div>
+
+                                <div className="p-3 rounded-xl border bg-card text-card-foreground shadow-sm flex items-start gap-3">
+                                    <div className="p-2 bg-cyan-500/10 rounded-lg text-cyan-600 mt-0.5">
+                                        <Clock className="h-4 w-4" />
+                                    </div>
+                                    <div>
+                                        <p className="text-xs font-medium text-muted-foreground">Last Updated</p>
+                                        <p className="font-semibold mt-0.5">{startup.updatedAt ? formatDate(startup.updatedAt) : 'Same as created'}</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Team Members */}
+                            {startup.members && startup.members.length > 0 && (
                                 <div>
-                                    <p className="text-xs font-medium text-muted-foreground">Industry</p>
-                                    <p className="font-semibold mt-0.5">{startup.industry}</p>
-                                </div>
-                            </div>
+                                    <div className="flex items-center justify-between mb-3">
+                                        <h4 className="text-sm font-semibold flex items-center gap-2">
+                                            <Users className="h-4 w-4" />
+                                            Team Members
+                                        </h4>
+                                        {isAdminOrOwner && (
+                                            <Button
+                                                size="sm"
+                                                variant="outline"
+                                                className="h-7 text-xs"
+                                                onClick={() => setIsAddMemberOpen(true)}
+                                            >
+                                                <UserPlus className="h-3.5 w-3.5 mr-1" />
+                                                Add Member
+                                            </Button>
+                                        )}
+                                    </div>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                        {startup.members.map((member) => {
+                                            const isOwner = member.userId === startup.ownerId;
+                                            return (
+                                                <div key={member.id} className={cn(
+                                                    "group relative flex items-start gap-4 p-4 rounded-xl border transition-all duration-300",
+                                                    isOwner
+                                                        ? "border-amber-400/50 bg-gradient-to-br from-card to-card/50 shadow-sm hover:border-amber-500/60"
+                                                        : "border-border/50 bg-gradient-to-br from-card to-card/50 hover:to-accent/5 hover:border-accent/20"
+                                                )}>
+                                                    {/* Avatar with Status Indicator */}
+                                                    <div className="relative shrink-0">
+                                                        <img
+                                                            src={member.userAvatarUrl || `https://api.dicebear.com/7.x/initials/svg?seed=${member.userEmail}`}
+                                                            alt={member.userName}
+                                                            className="h-12 w-12 rounded-full object-cover border ring-2 ring-background shadow-sm"
+                                                        />
+                                                        <div className={cn(
+                                                            "absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full border-[2px] border-card ring-1 ring-background",
+                                                            member.isActive ? "bg-emerald-500" : "bg-slate-400"
+                                                        )} title={member.isActive ? "Active Member" : "Past Member"} />
+                                                    </div>
 
-
-
-                            <div className="p-3 rounded-xl border bg-card text-card-foreground shadow-sm flex items-start gap-3">
-                                <div className="p-2 bg-orange-500/10 rounded-lg text-orange-600 mt-0.5">
-                                    <Calendar className="h-4 w-4" />
-                                </div>
-                                <div>
-                                    <p className="text-xs font-medium text-muted-foreground">Created</p>
-                                    <p className="font-semibold mt-0.5">{formatDate(startup.createdAt)}</p>
-                                </div>
-                            </div>
-
-                            <div className="p-3 rounded-xl border bg-card text-card-foreground shadow-sm flex items-start gap-3">
-                                <div className="p-2 bg-cyan-500/10 rounded-lg text-cyan-600 mt-0.5">
-                                    <Clock className="h-4 w-4" />
-                                </div>
-                                <div>
-                                    <p className="text-xs font-medium text-muted-foreground">Last Updated</p>
-                                    <p className="font-semibold mt-0.5">{startup.updatedAt ? formatDate(startup.updatedAt) : 'Same as created'}</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Team Members */}
-                        {startup.members && startup.members.length > 0 && (
-                            <div>
-                                <div className="flex items-center justify-between mb-3">
-                                    <h4 className="text-sm font-semibold flex items-center gap-2">
-                                        <Users className="h-4 w-4" />
-                                        Team Members
-                                    </h4>
-                                    {isAdminOrOwner && (
-                                        <Button
-                                            size="sm"
-                                            variant="outline"
-                                            className="h-7 text-xs"
-                                            onClick={() => setIsAddMemberOpen(true)}
-                                        >
-                                            <UserPlus className="h-3.5 w-3.5 mr-1" />
-                                            Add Member
-                                        </Button>
-                                    )}
-                                </div>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    {startup.members.map((member) => {
-                                        const isOwner = member.userId === startup.ownerId;
-                                        return (
-                                            <div key={member.id} className={cn(
-                                                "group relative flex items-start gap-4 p-4 rounded-xl border transition-all duration-300",
-                                                isOwner
-                                                    ? "border-amber-400/50 bg-gradient-to-br from-card to-card/50 shadow-sm hover:border-amber-500/60"
-                                                    : "border-border/50 bg-gradient-to-br from-card to-card/50 hover:to-accent/5 hover:border-accent/20"
-                                            )}>
-                                                {/* Avatar with Status Indicator */}
-                                                <div className="relative shrink-0">
-                                                    {member.userAvatarUrl ? (
-                                                        <img src={member.userAvatarUrl} alt={member.userName} className="h-12 w-12 rounded-full object-cover border ring-2 ring-background shadow-sm" />
-                                                    ) : (
-                                                        <div className="h-12 w-12 rounded-full bg-primary/5 flex items-center justify-center border border-primary/10 ring-2 ring-background shadow-sm">
-                                                            <span className="font-bold text-primary text-sm">
-                                                                {member.userName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
-                                                            </span>
-                                                        </div>
-                                                    )}
-                                                    <div className={cn(
-                                                        "absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full border-[2px] border-card ring-1 ring-background",
-                                                        member.isActive ? "bg-emerald-500" : "bg-slate-400"
-                                                    )} title={member.isActive ? "Active Member" : "Past Member"} />
-                                                </div>
-
-                                                {/* Info */}
-                                                <div className="flex-1 min-w-0">
-                                                    <div className="flex items-start justify-between">
-                                                        <div className="min-w-0 pr-2">
-                                                            <div className="flex items-center gap-2">
-                                                                <p className={cn(
-                                                                    "font-semibold truncate leading-none",
-                                                                    isOwner ? "text-amber-900" : "text-foreground"
-                                                                )}>
-                                                                    {member.userName}
+                                                    {/* Info */}
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="flex items-start justify-between">
+                                                            <div className="min-w-0 pr-2">
+                                                                <div className="flex items-center gap-2">
+                                                                    <p className={cn(
+                                                                        "font-semibold truncate leading-none",
+                                                                        isOwner ? "text-amber-900" : "text-foreground"
+                                                                    )}>
+                                                                        {member.userName}
+                                                                    </p>
+                                                                    {isOwner && (
+                                                                        <span className="inline-flex items-center rounded-md bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold text-amber-700 ring-1 ring-inset ring-amber-600/20 shadow-sm whitespace-nowrap">
+                                                                            Owner
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+                                                                <p className="text-xs text-muted-foreground mt-1 truncate font-medium">
+                                                                    {member.userEmail}
                                                                 </p>
-                                                                {isOwner && (
-                                                                    <span className="inline-flex items-center rounded-md bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold text-amber-700 ring-1 ring-inset ring-amber-600/20 shadow-sm whitespace-nowrap">
-                                                                        Owner
-                                                                    </span>
+                                                            </div>
+
+                                                            {/* Actions */}
+                                                            <div className="flex items-center gap-1 -mt-1 -mr-2">
+                                                                {(user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN') && (
+                                                                    <Button
+                                                                        variant="ghost"
+                                                                        size="icon"
+                                                                        className="h-7 w-7 text-muted-foreground hover:text-primary"
+                                                                        onClick={() => setViewMemberId(member.userId)}
+                                                                        title="View User Details"
+                                                                    >
+                                                                        <Eye className="h-4 w-4" />
+                                                                    </Button>
+                                                                )}
+
+                                                                {isAdminOrOwner && member.userId !== user?.id && (
+                                                                    <DropdownMenu>
+                                                                        <DropdownMenuTrigger asChild>
+                                                                            <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground">
+                                                                                <MoreVertical className="h-4 w-4" />
+                                                                            </Button>
+                                                                        </DropdownMenuTrigger>
+                                                                        <DropdownMenuContent align="end" className="w-48">
+                                                                            <DropdownMenuLabel>Member Actions</DropdownMenuLabel>
+                                                                            <DropdownMenuSeparator />
+                                                                            {member.isActive && (
+                                                                                <>
+                                                                                    <DropdownMenuItem
+                                                                                        onClick={() => handleTransferOwnership(member.userId, member.userName)}
+                                                                                        className="text-blue-600 focus:text-blue-700 focus:bg-blue-50"
+                                                                                    >
+                                                                                        <UserCog className="mr-2 h-3.5 w-3.5" />
+                                                                                        Transfer Ownership
+                                                                                    </DropdownMenuItem>
+                                                                                    <DropdownMenuItem
+                                                                                        onClick={() => handleRemoveMember(member.userId, member.userName)}
+                                                                                        className="text-amber-600 focus:text-amber-700 focus:bg-amber-50"
+                                                                                    >
+                                                                                        <LogOut className="mr-2 h-3.5 w-3.5" />
+                                                                                        Mark as Left
+                                                                                    </DropdownMenuItem>
+                                                                                </>
+                                                                            )}
+                                                                            <DropdownMenuItem
+                                                                                onClick={() => handleUnsignMember(member.userId, member.userName)}
+                                                                                className="text-red-600 focus:text-red-700 focus:bg-red-50"
+                                                                            >
+                                                                                <Trash2 className="mr-2 h-3.5 w-3.5" />
+                                                                                Delete from History
+                                                                            </DropdownMenuItem>
+                                                                        </DropdownMenuContent>
+                                                                    </DropdownMenu>
                                                                 )}
                                                             </div>
-                                                            <p className="text-xs text-muted-foreground mt-1 truncate font-medium">
-                                                                {member.userEmail}
-                                                            </p>
                                                         </div>
 
-                                                        {/* Actions */}
-                                                        <div className="flex items-center gap-1 -mt-1 -mr-2">
-                                                            {(user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN') && (
-                                                                <Button
-                                                                    variant="ghost"
-                                                                    size="icon"
-                                                                    className="h-7 w-7 text-muted-foreground hover:text-primary"
-                                                                    onClick={() => setViewMemberId(member.userId)}
-                                                                    title="View User Details"
-                                                                >
-                                                                    <Eye className="h-4 w-4" />
-                                                                </Button>
-                                                            )}
+                                                        <div className="mt-3 flex flex-wrap items-center gap-2">
+                                                            {(() => {
+                                                                const roleColors: Record<string, string> = {
+                                                                    FOUNDER: "bg-white text-indigo-700 border-indigo-200 hover:bg-indigo-50",
+                                                                    CO_FOUNDER: "bg-white text-indigo-600 border-indigo-200 hover:bg-indigo-50",
+                                                                    CEO: "bg-white text-purple-700 border-purple-200 hover:bg-purple-50",
+                                                                    CTO: "bg-white text-cyan-700 border-cyan-200 hover:bg-cyan-50",
+                                                                    COO: "bg-white text-blue-700 border-blue-200 hover:bg-blue-50",
+                                                                    CFO: "bg-white text-emerald-700 border-emerald-200 hover:bg-emerald-50",
+                                                                    CMO: "bg-white text-pink-700 border-pink-200 hover:bg-pink-50",
+                                                                    CHIEF_PRODUCT_OFFICER: "bg-white text-orange-700 border-orange-200 hover:bg-orange-50",
+                                                                    DEVELOPER: "bg-white text-slate-700 border-slate-200 hover:bg-slate-50",
+                                                                    DESIGNER: "bg-white text-rose-700 border-rose-200 hover:bg-rose-50",
+                                                                    OTHER: "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"
+                                                                };
+                                                                const colorClass = roleColors[member.role] || "bg-white text-gray-600 border-gray-200";
 
-                                                            {isAdminOrOwner && member.userId !== user?.id && (
-                                                                <DropdownMenu>
-                                                                    <DropdownMenuTrigger asChild>
-                                                                        <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground">
-                                                                            <MoreVertical className="h-4 w-4" />
-                                                                        </Button>
-                                                                    </DropdownMenuTrigger>
-                                                                    <DropdownMenuContent align="end" className="w-48">
-                                                                        <DropdownMenuLabel>Member Actions</DropdownMenuLabel>
-                                                                        <DropdownMenuSeparator />
-                                                                        {member.isActive && (
-                                                                            <>
-                                                                                <DropdownMenuItem
-                                                                                    onClick={() => handleTransferOwnership(member.userId, member.userName)}
-                                                                                    className="text-blue-600 focus:text-blue-700 focus:bg-blue-50"
-                                                                                >
-                                                                                    <UserCog className="mr-2 h-3.5 w-3.5" />
-                                                                                    Transfer Ownership
-                                                                                </DropdownMenuItem>
-                                                                                <DropdownMenuItem
-                                                                                    onClick={() => handleRemoveMember(member.userId, member.userName)}
-                                                                                    className="text-amber-600 focus:text-amber-700 focus:bg-amber-50"
-                                                                                >
-                                                                                    <LogOut className="mr-2 h-3.5 w-3.5" />
-                                                                                    Mark as Left
-                                                                                </DropdownMenuItem>
-                                                                            </>
-                                                                        )}
-                                                                        <DropdownMenuItem
-                                                                            onClick={() => handleUnsignMember(member.userId, member.userName)}
-                                                                            className="text-red-600 focus:text-red-700 focus:bg-red-50"
-                                                                        >
-                                                                            <Trash2 className="mr-2 h-3.5 w-3.5" />
-                                                                            Delete from History
-                                                                        </DropdownMenuItem>
-                                                                    </DropdownMenuContent>
-                                                                </DropdownMenu>
-                                                            )}
+                                                                return (
+                                                                    <span className={cn("inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold border shadow-sm transition-colors", colorClass)}>
+                                                                        {member.role.replace(/_/g, " ")}
+                                                                    </span>
+                                                                )
+                                                            })()}
+
+                                                            <span className="text-[10px] text-muted-foreground pl-1 border-l border-border/50">
+                                                                Joined {new Date(member.joinedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                                                            </span>
                                                         </div>
-                                                    </div>
-
-                                                    <div className="mt-3 flex flex-wrap items-center gap-2">
-                                                        {(() => {
-                                                            const roleColors: Record<string, string> = {
-                                                                FOUNDER: "bg-white text-indigo-700 border-indigo-200 hover:bg-indigo-50",
-                                                                CO_FOUNDER: "bg-white text-indigo-600 border-indigo-200 hover:bg-indigo-50",
-                                                                CEO: "bg-white text-purple-700 border-purple-200 hover:bg-purple-50",
-                                                                CTO: "bg-white text-cyan-700 border-cyan-200 hover:bg-cyan-50",
-                                                                COO: "bg-white text-blue-700 border-blue-200 hover:bg-blue-50",
-                                                                CFO: "bg-white text-emerald-700 border-emerald-200 hover:bg-emerald-50",
-                                                                CMO: "bg-white text-pink-700 border-pink-200 hover:bg-pink-50",
-                                                                CHIEF_PRODUCT_OFFICER: "bg-white text-orange-700 border-orange-200 hover:bg-orange-50",
-                                                                DEVELOPER: "bg-white text-slate-700 border-slate-200 hover:bg-slate-50",
-                                                                DESIGNER: "bg-white text-rose-700 border-rose-200 hover:bg-rose-50",
-                                                                OTHER: "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"
-                                                            };
-                                                            const colorClass = roleColors[member.role] || "bg-white text-gray-600 border-gray-200";
-
-                                                            return (
-                                                                <span className={cn("inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold border shadow-sm transition-colors", colorClass)}>
-                                                                    {member.role.replace(/_/g, " ")}
-                                                                </span>
-                                                            )
-                                                        })()}
-
-                                                        <span className="text-[10px] text-muted-foreground pl-1 border-l border-border/50">
-                                                            Joined {new Date(member.joinedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                                                        </span>
                                                     </div>
                                                 </div>
-                                            </div>
-                                        )
-                                    })}
+                                            )
+                                        })}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Description */}
+                            <div>
+                                <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">
+                                    <FileText className="h-4 w-4" />
+                                    About Request
+                                </h4>
+                                <div className="p-4 rounded-lg bg-muted/30 text-sm leading-relaxed whitespace-pre-wrap">
+                                    {startup.fullDescription}
                                 </div>
                             </div>
-                        )}
 
-                        {/* Description */}
-                        <div>
-                            <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">
-                                <FileText className="h-4 w-4" />
-                                About Request
-                            </h4>
-                            <div className="p-4 rounded-lg bg-muted/30 text-sm leading-relaxed whitespace-pre-wrap">
-                                {startup.fullDescription}
+                            {/* Documents Grid */}
+                            <div className="grid grid-cols-2 gap-4 pt-2">
+                                <Button
+                                    variant="secondary"
+                                    className="w-full justify-start"
+                                    onClick={() => window.open(startup.pitchDeckUrl, '_blank')}
+                                    disabled={!startup.pitchDeckUrl}
+                                >
+                                    <FileText className="h-4 w-4 mr-2 text-blue-500" />
+                                    View Pitch Deck
+                                </Button>
+                                <Button
+                                    variant="secondary"
+                                    className="w-full justify-start"
+                                    onClick={() => window.open(startup.financialDocumentsUrl, '_blank')}
+                                    disabled={!startup.financialDocumentsUrl}
+                                >
+                                    <FileSpreadsheet className="h-4 w-4 mr-2 text-emerald-500" />
+                                    Financial Documents
+                                </Button>
+                                <Button
+                                    variant="secondary"
+                                    className="w-full justify-start"
+                                    onClick={() => window.open(startup.businessPlanUrl, '_blank')}
+                                    disabled={!startup.businessPlanUrl}
+                                >
+                                    <FileText className="h-4 w-4 mr-2 text-amber-500" />
+                                    Business Plan
+                                </Button>
+                                <Button
+                                    variant="secondary"
+                                    className="w-full justify-start"
+                                    onClick={() => window.open(startup.businessModelUrl, '_blank')}
+                                    disabled={!startup.businessModelUrl}
+                                >
+                                    <FilePieChart className="h-4 w-4 mr-2 text-purple-500" />
+                                    Business Model
+                                </Button>
                             </div>
                         </div>
+                    )} {/* Close details block */}
 
-                        {/* Documents Grid */}
-                        <div className="grid grid-cols-2 gap-4 pt-2">
-                            <Button
-                                variant="secondary"
-                                className="w-full justify-start"
-                                onClick={() => window.open(startup.pitchDeckUrl, '_blank')}
-                                disabled={!startup.pitchDeckUrl}
-                            >
-                                <FileText className="h-4 w-4 mr-2 text-blue-500" />
-                                View Pitch Deck
-                            </Button>
-                            <Button
-                                variant="secondary"
-                                className="w-full justify-start"
-                                onClick={() => window.open(startup.financialDocumentsUrl, '_blank')}
-                                disabled={!startup.financialDocumentsUrl}
-                            >
-                                <FileSpreadsheet className="h-4 w-4 mr-2 text-emerald-500" />
-                                Financial Documents
-                            </Button>
-                            <Button
-                                variant="secondary"
-                                className="w-full justify-start"
-                                onClick={() => window.open(startup.businessPlanUrl, '_blank')}
-                                disabled={!startup.businessPlanUrl}
-                            >
-                                <FileText className="h-4 w-4 mr-2 text-amber-500" />
-                                Business Plan
-                            </Button>
-                            <Button
-                                variant="secondary"
-                                className="w-full justify-start"
-                                onClick={() => window.open(startup.businessModelUrl, '_blank')}
-                                disabled={!startup.businessModelUrl}
-                            >
-                                <FilePieChart className="h-4 w-4 mr-2 text-purple-500" />
-                                Business Model
-                            </Button>
+                    {activeTab === 'history' && (
+                        <div className="space-y-4 min-h-[400px]">
+                            {loadingLogs ? (
+                                <div className="flex flex-col items-center justify-center h-64">
+                                    <Loader2 className="h-8 w-8 animate-spin text-primary mb-2" />
+                                    <p className="text-muted-foreground">Loading audit logs...</p>
+                                </div>
+                            ) : auditLogs.length === 0 ? (
+                                <div className="flex flex-col items-center justify-center h-64 text-muted-foreground from-muted/20 rounded-xl bg-muted/10 border-2 border-dashed">
+                                    <History className="h-10 w-10 mb-2 opacity-50" />
+                                    <p>No moderation history found</p>
+                                </div>
+                            ) : (
+                                <div className="rounded-md border">
+                                    <div className="grid grid-cols-[1fr_auto_1fr] bg-muted/50 p-3 text-xs font-medium text-muted-foreground">
+                                        <div>Action</div>
+                                        <div>Admin</div>
+                                        <div className="text-right">Date</div>
+                                    </div>
+                                    <div className="divide-y">
+                                        {auditLogs.map((log) => (
+                                            <div key={log.id} className="p-4 text-sm flex flex-col gap-2 hover:bg-muted/20">
+                                                <div className="flex items-center justify-between">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className={cn(
+                                                            "px-2 py-0.5 rounded-full text-xs font-bold border",
+                                                            log.actionType === 'WARNING' ? "bg-amber-100 text-amber-700 border-amber-200" :
+                                                                log.actionType === 'STATUS_CHANGE' ? "bg-blue-100 text-blue-700 border-blue-200" :
+                                                                    "bg-gray-100 text-gray-700"
+                                                        )}>
+                                                            {log.actionType}
+                                                        </span>
+                                                        {log.newStatus && (
+                                                            <span className="text-xs text-muted-foreground flex items-center gap-1">
+                                                                {log.previousStatus} <span>→</span> <span className="font-medium text-foreground">{log.newStatus}</span>
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    <span className="text-xs text-muted-foreground">{formatDate(log.createdAt)}</span>
+                                                </div>
+                                                <div className="bg-muted/30 p-2 rounded text-xs">
+                                                    <span className="font-semibold block mb-1">Reason:</span>
+                                                    {log.reason || "No reason provided"}
+                                                </div>
+                                                <div className="text-xs text-muted-foreground flex items-center gap-1">
+                                                    <UserCog className="h-3 w-3" />
+                                                    {log.adminEmail}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
                         </div>
-                    </div>
+                    )}
                 </div>
 
                 <AlertDialog open={confirmDialog.open} onOpenChange={(open: boolean) => setConfirmDialog(prev => ({ ...prev, open }))}>

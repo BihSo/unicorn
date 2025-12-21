@@ -8,6 +8,17 @@ import { formatDate } from '../../lib/utils'
 import { StartupDetailsModal } from '../admin/StartupDetailsModal'
 import { fetchAllStartups as fetchStartupsApi } from '../../lib/api'
 import { toast } from 'sonner'
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from '../ui/dropdown-menu'
+import { MoreVertical, Eye, AlertTriangle, Shield, Trash2 } from 'lucide-react'
+import { WarnStartupDialog, StartupStatusDialog, DeleteStartupDialog } from './StartupActionDialogs'
+import { useAuth } from '../../contexts/AuthContext'
 
 export function StartupsTable() {
     const [startups, setStartups] = useState<Startup[]>([])
@@ -15,6 +26,15 @@ export function StartupsTable() {
     const [selectedStartup, setSelectedStartup] = useState<Startup | null>(null)
     const [isModalOpen, setIsModalOpen] = useState(false)
     const [memberEmail, setMemberEmail] = useState('')
+
+    // Action Dialog States
+    const [actionStartup, setActionStartup] = useState<Startup | null>(null)
+    const [warnDialogOpen, setWarnDialogOpen] = useState(false)
+    const [statusDialogOpen, setStatusDialogOpen] = useState(false)
+    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+
+    const { user } = useAuth()
+    const isAdmin = user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN'
 
     const fetchAllStartups = async () => {
         setLoading(true)
@@ -47,16 +67,34 @@ export function StartupsTable() {
         fetchAllStartups()
     }
 
+    // Action Handlers
+    const handleWarn = (e: React.MouseEvent, startup: Startup) => {
+        e.stopPropagation()
+        setActionStartup(startup)
+        setWarnDialogOpen(true)
+    }
+
+    const handleStatusChange = (e: React.MouseEvent, startup: Startup) => {
+        e.stopPropagation()
+        setActionStartup(startup)
+        setStatusDialogOpen(true)
+    }
+
+    const handleDelete = (e: React.MouseEvent, startup: Startup) => {
+        e.stopPropagation()
+        setActionStartup(startup)
+        setDeleteDialogOpen(true)
+    }
+
     const getStatusBadgeClass = (status: string) => {
         switch (status) {
-            case 'APPROVED':
-                return 'bg-green-950/50 text-green-400 border border-green-900'
-            case 'PENDING':
-                return 'bg-yellow-950/50 text-yellow-400 border border-yellow-900'
-            case 'REJECTED':
-                return 'bg-red-950/50 text-red-400 border border-red-900'
-            default:
-                return 'bg-slate-800 text-slate-400 border border-slate-700'
+            case 'APPROVED': return 'bg-green-500/10 text-green-500 border-green-500/30'
+            case 'PENDING': return 'bg-yellow-500/10 text-yellow-500 border-yellow-500/30'
+            case 'REJECTED': return 'bg-red-500/10 text-red-500 border-red-500/30'
+            case 'SUSPENDED': return 'bg-orange-500/10 text-orange-500 border-orange-500/30'
+            case 'BANNED': return 'bg-destructive/10 text-destructive border-destructive/30'
+            case 'ARCHIVED': return 'bg-gray-500/10 text-gray-500 border-gray-500/30'
+            default: return 'bg-slate-800 text-slate-400 border border-slate-700'
         }
     }
 
@@ -124,6 +162,7 @@ export function StartupsTable() {
                                     <TableHead>Owner</TableHead>
                                     <TableHead>Date Submitted</TableHead>
                                     <TableHead>Status</TableHead>
+                                    {isAdmin && <TableHead className="text-right">Actions</TableHead>}
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -141,10 +180,51 @@ export function StartupsTable() {
                                         <TableCell>{startup.ownerEmail}</TableCell>
                                         <TableCell>{formatDate(startup.createdAt)}</TableCell>
                                         <TableCell>
-                                            <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium ${getStatusBadgeClass(startup.status)}`}>
+                                            <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium border ${getStatusBadgeClass(startup.status)}`}>
                                                 {startup.status}
                                             </span>
                                         </TableCell>
+                                        {isAdmin && (
+                                            <TableCell className="text-right">
+                                                <DropdownMenu>
+                                                    <DropdownMenuTrigger asChild>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className="h-8 w-8 p-0"
+                                                            onClick={(e) => e.stopPropagation()}
+                                                        >
+                                                            <span className="sr-only">Open menu</span>
+                                                            <MoreVertical className="h-4 w-4" />
+                                                        </Button>
+                                                    </DropdownMenuTrigger>
+                                                    <DropdownMenuContent align="end">
+                                                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleRowClick(startup) }}>
+                                                            <Eye className="mr-2 h-4 w-4" />
+                                                            View Details
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuSeparator />
+                                                        <DropdownMenuItem onClick={(e) => handleStatusChange(e, startup)}>
+                                                            <Shield className="mr-2 h-4 w-4 text-blue-500" />
+                                                            Change Status
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuItem onClick={(e) => handleWarn(e, startup)}>
+                                                            <AlertTriangle className="mr-2 h-4 w-4 text-yellow-500" />
+                                                            Issue Warning
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuSeparator />
+                                                        <DropdownMenuItem
+                                                            onClick={(e) => handleDelete(e, startup)}
+                                                            className="text-red-600 focus:text-red-600"
+                                                        >
+                                                            <Trash2 className="mr-2 h-4 w-4" />
+                                                            Delete Permanently
+                                                        </DropdownMenuItem>
+                                                    </DropdownMenuContent>
+                                                </DropdownMenu>
+                                            </TableCell>
+                                        )}
                                     </TableRow>
                                 ))}
                             </TableBody>
@@ -160,6 +240,30 @@ export function StartupsTable() {
                 onClose={handleModalClose}
                 onActionComplete={handleActionComplete}
             />
+
+            {/* Action Dialogs */}
+            {actionStartup && (
+                <>
+                    <WarnStartupDialog
+                        startup={actionStartup}
+                        open={warnDialogOpen}
+                        onOpenChange={setWarnDialogOpen}
+                        onSuccess={handleActionComplete}
+                    />
+                    <StartupStatusDialog
+                        startup={actionStartup}
+                        open={statusDialogOpen}
+                        onOpenChange={setStatusDialogOpen}
+                        onSuccess={handleActionComplete}
+                    />
+                    <DeleteStartupDialog
+                        startup={actionStartup}
+                        open={deleteDialogOpen}
+                        onOpenChange={setDeleteDialogOpen}
+                        onSuccess={handleActionComplete}
+                    />
+                </>
+            )}
         </>
     )
 }
