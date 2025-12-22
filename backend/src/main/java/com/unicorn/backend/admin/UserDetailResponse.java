@@ -102,6 +102,8 @@ public class UserDetailResponse {
                 private BigDecimal investmentBudget;
                 private String preferredIndustries;
                 private String linkedInUrl;
+                private Boolean verificationRequested;
+                private String verificationNotes;
                 private Boolean isVerified;
                 private LocalDateTime verifiedAt;
                 private Boolean readyForPayment;
@@ -212,6 +214,9 @@ public class UserDetailResponse {
                                         .investmentBudget(investorProfile.getInvestmentBudget())
                                         .preferredIndustries(investorProfile.getPreferredIndustries())
                                         .linkedInUrl(user.getLinkedInUrl()) // Use User LinkedIn
+                                        .verificationRequested(
+                                                        Boolean.TRUE.equals(investorProfile.getVerificationRequested()))
+                                        .verificationNotes(investorProfile.getVerificationNotes())
                                         .isVerified(Boolean.TRUE.equals(investorProfile.getIsVerified()))
                                         .verifiedAt(investorProfile.getVerifiedAt())
                                         .readyForPayment(Boolean.TRUE.equals(investorProfile.getReadyForPayment()))

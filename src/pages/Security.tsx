@@ -120,15 +120,7 @@ export function Security() {
 
     return (
         <div className="space-y-8 animate-in fade-in duration-500">
-            {/* Header */}
-            <div>
-                <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
-                    Security Center
-                </h1>
-                <p className="text-muted-foreground mt-2">
-                    Real-time monitoring of authentication tokens, active sessions, and system security status.
-                </p>
-            </div>
+
 
             {/* General Token Statistics Section */}
             <section className="space-y-6">

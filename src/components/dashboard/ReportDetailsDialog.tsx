@@ -26,7 +26,7 @@ import {
     Trash2,
     Gavel,
 } from 'lucide-react'
-import { getReportDetails, Report } from '../../lib/api'
+import { getReportDetails, Report, updateReportStatus } from '../../lib/api'
 import { formatDate } from '../../lib/utils'
 import { toast } from 'sonner'
 import { Card, CardContent } from '../ui/card'
@@ -69,7 +69,7 @@ interface ReportDetailsDialogProps {
     onReportUpdated?: () => void
 }
 
-export function ReportDetailsDialog({ reportId, open, onOpenChange, onReportUpdated: _ }: ReportDetailsDialogProps) {
+export function ReportDetailsDialog({ reportId, open, onOpenChange, onReportUpdated }: ReportDetailsDialogProps) {
     const [report, setReport] = useState<Report | null>(null)
     const [loading, setLoading] = useState(false)
     const [viewUserId, setViewUserId] = useState<string | null>(null)
@@ -96,6 +96,20 @@ export function ReportDetailsDialog({ reportId, open, onOpenChange, onReportUpda
         try {
             const data = await getReportDetails(reportId)
             setReport(data)
+
+            // Auto-update status to UNDER_REVIEW if currently PENDING
+            if (data.status === 'PENDING') {
+                try {
+                    await updateReportStatus(reportId, 'UNDER_REVIEW')
+                    // Update local state without full reload
+                    setReport({ ...data, status: 'UNDER_REVIEW' })
+                    // Notify parent list to refresh
+                    onReportUpdated?.()
+                    toast.info('Report marked as Under Review')
+                } catch (err) {
+                    console.error('Failed to auto-update status', err)
+                }
+            }
         } catch (error: any) {
             console.error('Failed to load report:', error)
             toast.error('Failed to load report details')
@@ -229,14 +243,92 @@ export function ReportDetailsDialog({ reportId, open, onOpenChange, onReportUpda
                                         </Badge>
 
                                         {(report.status !== 'RESOLVED' && report.status !== 'REJECTED') && (
-                                            <Button
-                                                onClick={() => setResolveDialogOpen(true)}
-                                                className="gap-2 bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm transition-all hover:shadow-md"
-                                                size="sm"
-                                            >
-                                                <Gavel className="h-4 w-4" />
-                                                Resolve Report
-                                            </Button>
+                                            <div className="flex items-center gap-2">
+                                                <DropdownMenu>
+                                                    <DropdownMenuTrigger asChild>
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            className="gap-2 h-9 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-indigo-600 dark:hover:text-indigo-400 transition-all shadow-sm"
+                                                        >
+                                                            <MoreVertical className="h-4 w-4" />
+                                                            Actions
+                                                        </Button>
+                                                    </DropdownMenuTrigger>
+                                                    <DropdownMenuContent
+                                                        align="end"
+                                                        className="w-56 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 shadow-xl rounded-xl p-1.5"
+                                                    >
+                                                        <DropdownMenuLabel className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-2 py-1.5">
+                                                            Status Actions
+                                                        </DropdownMenuLabel>
+
+                                                        <DropdownMenuItem
+                                                            className="cursor-pointer rounded-lg px-2 py-2 text-sm font-medium transition-colors hover:bg-slate-100 dark:hover:bg-slate-800 focus:bg-slate-100 dark:focus:bg-slate-800 text-slate-700 dark:text-slate-200"
+                                                            onClick={async () => {
+                                                                if (report.status === 'PENDING') return
+                                                                try {
+                                                                    await updateReportStatus(report.id, 'PENDING')
+                                                                    setReport({ ...report, status: 'PENDING' })
+                                                                    onReportUpdated?.()
+                                                                    toast.success('Report marked as Pending')
+                                                                } catch (err) {
+                                                                    toast.error('Failed to update status')
+                                                                }
+                                                            }}
+                                                            disabled={report.status === 'PENDING'}
+                                                        >
+                                                            <div className="flex items-center gap-2 w-full">
+                                                                <div className="p-1.5 rounded-md bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400">
+                                                                    <Clock className="h-4 w-4" />
+                                                                </div>
+                                                                <span>Mark as Pending</span>
+                                                            </div>
+                                                        </DropdownMenuItem>
+
+                                                        <DropdownMenuItem
+                                                            className="cursor-pointer rounded-lg px-2 py-2 text-sm font-medium transition-colors hover:bg-slate-100 dark:hover:bg-slate-800 focus:bg-slate-100 dark:focus:bg-slate-800 text-slate-700 dark:text-slate-200 mt-1"
+                                                            onClick={async () => {
+                                                                if (report.status === 'UNDER_REVIEW') return
+                                                                try {
+                                                                    await updateReportStatus(report.id, 'UNDER_REVIEW')
+                                                                    setReport({ ...report, status: 'UNDER_REVIEW' })
+                                                                    onReportUpdated?.()
+                                                                    toast.success('Report marked as Under Review')
+                                                                } catch (err) {
+                                                                    toast.error('Failed to update status')
+                                                                }
+                                                            }}
+                                                            disabled={report.status === 'UNDER_REVIEW'}
+                                                        >
+                                                            <div className="flex items-center gap-2 w-full">
+                                                                <div className="p-1.5 rounded-md bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400">
+                                                                    <Eye className="h-4 w-4" />
+                                                                </div>
+                                                                <span>Mark Under Review</span>
+                                                            </div>
+                                                        </DropdownMenuItem>
+
+                                                        <DropdownMenuSeparator className="my-2 bg-slate-100 dark:bg-slate-800" />
+
+                                                        <DropdownMenuLabel className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-2 py-1.5">
+                                                            Resolution
+                                                        </DropdownMenuLabel>
+
+                                                        <DropdownMenuItem
+                                                            onClick={() => setResolveDialogOpen(true)}
+                                                            className="cursor-pointer rounded-lg px-2 py-2 text-sm font-medium transition-colors hover:bg-indigo-50 dark:hover:bg-indigo-900/20 focus:bg-indigo-50 dark:focus:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300"
+                                                        >
+                                                            <div className="flex items-center gap-2 w-full">
+                                                                <div className="p-1.5 rounded-md bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400">
+                                                                    <Gavel className="h-4 w-4" />
+                                                                </div>
+                                                                <span>Resolve Report</span>
+                                                            </div>
+                                                        </DropdownMenuItem>
+                                                    </DropdownMenuContent>
+                                                </DropdownMenu>
+                                            </div>
                                         )}
 
                                         <div className="h-6 w-px bg-border mx-1" />
@@ -503,7 +595,7 @@ export function ReportDetailsDialog({ reportId, open, onOpenChange, onReportUpda
 
             <UserDetailsModal
                 open={!!viewUserId}
-                onOpenChange={(open) => !open && setViewUserId(null)}
+                onOpenChange={(open: boolean) => !open && setViewUserId(null)}
                 userId={viewUserId}
             />
 

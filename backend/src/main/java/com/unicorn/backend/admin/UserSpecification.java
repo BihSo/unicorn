@@ -9,6 +9,7 @@ import org.springframework.data.jpa.domain.Specification;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 /**
  * Dynamic specification builder for advanced user filtering.
@@ -72,6 +73,45 @@ public class UserSpecification {
 
             addDateRangeFilter(predicates, criteriaBuilder, root.get("suspendedAt"),
                     filter.getSuspendedAtFrom(), filter.getSuspendedAtTo(), filter.getSuspendedAtNegate());
+
+            addDateRangeFilter(predicates, criteriaBuilder, root.get("updatedAt"),
+                    filter.getUpdatedAtFrom(), filter.getUpdatedAtTo(), filter.getUpdatedAtNegate());
+
+            // ID Filter (UUID as string)
+            if (filter.getId() != null && !filter.getId().trim().isEmpty()) {
+                // Ensure it's a valid UUID string logic or just text match
+                // For simplicity, we cast ID to string and do like match or exact match
+                // But JPA criteria on UUID usually requires strict type.
+                // Let's try exact match by parsing UUID if valid, or fail gracefully
+                try {
+                    UUID uuid = UUID.fromString(filter.getId().trim());
+                    Predicate idPredicate = criteriaBuilder.equal(root.get("id"), uuid);
+                    predicates.add(applyNegation(criteriaBuilder, idPredicate, filter.getIdNegate()));
+                } catch (IllegalArgumentException e) {
+                    // If not a valid UUID, search by string representation might fail across many
+                    // DBs unless cast.
+                    // Let's assume exact match. If invalid UUID, no result (or negated result).
+                    if (Boolean.TRUE.equals(filter.getIdNegate())) {
+                        // "Not invalid-uuid" -> True (all valid IDs are not this invalid string)
+                        // predicates.add(criteriaBuilder.conjunction()); // Effectively true
+                    } else {
+                        // "Is invalid-uuid" -> False
+                        predicates.add(criteriaBuilder.disjunction());
+                    }
+                }
+            }
+
+            // Boolean Filters - Is Verified Investor
+            if (filter.getIsVerifiedInvestor() != null) {
+                Predicate isVerified = criteriaBuilder.isTrue(root.get("investorProfile").get("isVerified"));
+                if (filter.getIsVerifiedInvestor()) {
+                    predicates.add(applyNegation(criteriaBuilder, isVerified, filter.getIsVerifiedInvestorNegate()));
+                } else {
+                    predicates.add(applyNegation(criteriaBuilder,
+                            criteriaBuilder.isFalse(root.get("investorProfile").get("isVerified")),
+                            filter.getIsVerifiedInvestorNegate()));
+                }
+            }
 
             // Boolean Filters - Has Investor Profile
             if (filter.getHasInvestorProfile() != null) {

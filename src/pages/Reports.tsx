@@ -179,13 +179,7 @@ export function Reports() {
 
     return (
         <div className="space-y-6 transition-colors duration-300">
-            {/* Header Section */}
-            <div className="flex flex-col gap-1">
-                <h1 className="text-3xl font-bold tracking-tight text-foreground">Reports Center</h1>
-                <p className="text-muted-foreground text-lg">
-                    Monitor, review, and act on community reports to ensure platform safety.
-                </p>
-            </div>
+
 
             {/* Stats Overview */}
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">

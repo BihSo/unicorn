@@ -14,7 +14,7 @@ import {
     Ban, CheckCircle, XCircle, DollarSign, Briefcase,
     Monitor, Globe, AlertCircle, Eye, Trash2
 } from 'lucide-react'
-import { formatDate, cn } from '../../lib/utils'
+import { formatDate, cn, formatCompactCurrency } from '../../lib/utils'
 import api from '../../lib/axios'
 import { toast } from 'sonner'
 import { useAuth } from '../../contexts/AuthContext'
@@ -92,10 +92,13 @@ interface UserDetails {
         linkedInUrl?: string
         isVerified: boolean
         verifiedAt?: string
+        verificationRequested?: boolean
+        verificationNotes?: string
         readyForPayment: boolean
     }
     startups?: Array<{
         id: string
+
         name: string
         industry?: string
         stage?: string
@@ -568,29 +571,47 @@ export function UserDetailsModal({ userId, open, onOpenChange, onAction }: UserD
                                             <>
                                                 <Separator />
                                                 {userDetails.investorInfo ? (
-                                                    <div className="p-4 rounded-lg bg-emerald-500/10 border border-emerald-500/30">
-                                                        <h4 className="font-semibold text-emerald-500 flex items-center gap-2">
+                                                    <div className={cn(
+                                                        "p-4 rounded-lg border",
+                                                        userDetails.investorInfo.isVerified ? "bg-emerald-500/10 border-emerald-500/30" :
+                                                            (!userDetails.investorInfo.verificationRequested && userDetails.investorInfo.verificationNotes?.includes('Rejected')) ? "bg-red-500/10 border-red-500/30" :
+                                                                "bg-blue-500/10 border-blue-500/30"
+                                                    )}>
+                                                        <h4 className={cn(
+                                                            "font-semibold flex items-center gap-2",
+                                                            userDetails.investorInfo.isVerified ? "text-emerald-500" :
+                                                                (!userDetails.investorInfo.verificationRequested && userDetails.investorInfo.verificationNotes?.includes('Rejected')) ? "text-red-500" :
+                                                                    "text-blue-500"
+                                                        )}>
                                                             <TrendingUp className="h-4 w-4" />
                                                             Investor Profile
                                                             {userDetails.investorInfo.isVerified ? (
                                                                 <CheckCircle className="h-4 w-4 text-green-500" />
+                                                            ) : (!userDetails.investorInfo.verificationRequested && userDetails.investorInfo.verificationNotes?.includes('Rejected')) ? (
+                                                                <XCircle className="h-4 w-4 text-red-500" />
                                                             ) : (
-                                                                <span className="text-muted-foreground text-xs font-normal border px-2 py-0.5 rounded-full">Not Verified</span>
+                                                                <span className="text-muted-foreground text-xs font-normal border px-2 py-0.5 rounded-full bg-white/20">
+                                                                    {userDetails.investorInfo.verificationRequested ? 'Verification Pending' : 'Not Verified'}
+                                                                </span>
                                                             )}
                                                         </h4>
                                                         <div className="mt-2 space-y-1 text-sm">
-                                                            <p><strong>Investment Budget:</strong> ${userDetails.investorInfo.investmentBudget?.toLocaleString() || 0}</p>
+
+                                                            <p><strong>Investment Budget:</strong> {formatCompactCurrency(userDetails.investorInfo.investmentBudget || 0)}</p>
                                                             <p><strong>Preferred Industries:</strong> {userDetails.investorInfo.preferredIndustries || '-'}</p>
                                                             <p><strong>Preferred Stage:</strong> {userDetails.investorInfo.preferredStage || 'All Stages'}</p>
-                                                            <div className="flex items-center gap-2 mt-2 pt-2 border-t border-emerald-500/20">
-                                                                <p><strong>Payment Status:</strong></p>
+
+                                                            <div className="flex items-center gap-2 mt-2 pt-2 border-t border-current opacity-70">
+                                                                <p><strong>Status:</strong></p>
                                                                 {userDetails.investorInfo.isVerified ? (
-                                                                    <Badge className="bg-green-500 text-white">Paid & Verified</Badge>
+                                                                    <Badge className="bg-green-500 text-white hover:bg-green-600">Verified</Badge>
                                                                 ) : userDetails.investorInfo.readyForPayment ? (
-                                                                    <Badge className="bg-blue-500 text-white">Ready for Payment</Badge>
-                                                                ) : (
+                                                                    <Badge className="bg-blue-500 text-white hover:bg-blue-600">Ready for Payment</Badge>
+                                                                ) : (!userDetails.investorInfo.verificationRequested && userDetails.investorInfo.verificationNotes?.includes('Rejected')) ? (
+                                                                    <Badge variant="destructive">Rejected</Badge>
+                                                                ) : userDetails.investorInfo.verificationRequested ? (
                                                                     <div className="flex items-center gap-2">
-                                                                        <Badge variant="outline" className="text-muted-foreground bg-gray-500/10">Pending Approval</Badge>
+                                                                        <Badge variant="secondary" className="bg-amber-500/20 text-amber-700 hover:bg-amber-500/30">Pending Review</Badge>
                                                                         <Button
                                                                             size="sm"
                                                                             variant="outline"
@@ -609,14 +630,15 @@ export function UserDetailsModal({ userId, open, onOpenChange, onAction }: UserD
                                                                             Approve
                                                                         </Button>
                                                                     </div>
+                                                                ) : (
+                                                                    <Badge variant="outline" className="text-muted-foreground">Not Applied</Badge>
                                                                 )}
 
-                                                                {/* Manual Verification Override */}
-                                                                {!userDetails.investorInfo.isVerified && (
+                                                                {!userDetails.investorInfo.isVerified && userDetails.investorInfo.readyForPayment && (
                                                                     <Button
                                                                         size="sm"
                                                                         variant="ghost"
-                                                                        className="h-6 text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-50 mt-1"
+                                                                        className="h-6 text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-50 ml-auto"
                                                                         onClick={async () => {
                                                                             if (!confirm('Are you sure you want to MANUALLY mark this investor as VERIFIED? This bypasses the payment check.')) return;
                                                                             try {
@@ -630,12 +652,22 @@ export function UserDetailsModal({ userId, open, onOpenChange, onAction }: UserD
                                                                         }}
                                                                     >
                                                                         <CheckCircle className="h-3 w-3 mr-1" />
-                                                                        Mark as Verified
+                                                                        Mark Verified
                                                                     </Button>
                                                                 )}
                                                             </div>
+
+                                                            {userDetails.investorInfo.verificationNotes && (
+                                                                <div className="mt-3 pt-2 border-t border-current opacity-70">
+                                                                    <p className="font-semibold text-xs uppercase opacity-70 mb-1">Verification History</p>
+                                                                    <div className="text-xs bg-background/50 p-2 rounded border border-current opacity-80 whitespace-pre-wrap">
+                                                                        {userDetails.investorInfo.verificationNotes}
+                                                                    </div>
+                                                                </div>
+                                                            )}
+
                                                             {userDetails.investorInfo.verifiedAt && (
-                                                                <p><strong>Verified Since:</strong> {formatDate(userDetails.investorInfo.verifiedAt)}</p>
+                                                                <p className="mt-2 text-xs opacity-70"><strong>Verified Since:</strong> {formatDate(userDetails.investorInfo.verifiedAt)}</p>
                                                             )}
                                                         </div>
                                                     </div>

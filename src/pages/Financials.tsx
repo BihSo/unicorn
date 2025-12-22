@@ -95,13 +95,7 @@ export function Financials() {
 
     return (
         <div className="space-y-6">
-            {/* Page Header */}
-            <div>
-                <h1 className="text-3xl font-bold tracking-tight">Financials</h1>
-                <p className="text-muted-foreground mt-2">
-                    Financial reports, revenue analytics, and subscription overview
-                </p>
-            </div>
+
 
             {error && (
                 <Alert variant="destructive">

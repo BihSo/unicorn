@@ -127,10 +127,21 @@ public class AdminController {
             @org.springframework.web.bind.annotation.RequestParam(required = false) Boolean isMemberOfStartupsNegate,
             @org.springframework.web.bind.annotation.RequestParam(required = false) Boolean isSuspended,
             @org.springframework.web.bind.annotation.RequestParam(required = false) Boolean isSuspendedNegate,
+
             @org.springframework.web.bind.annotation.RequestParam(required = false) Integer minWarningCount,
             @org.springframework.web.bind.annotation.RequestParam(required = false) Boolean minWarningCountNegate,
             @org.springframework.web.bind.annotation.RequestParam(required = false) Boolean hasActiveSession,
             @org.springframework.web.bind.annotation.RequestParam(required = false) Boolean hasActiveSessionNegate,
+
+            // New Filters
+            @org.springframework.web.bind.annotation.RequestParam(required = false) String id,
+            @org.springframework.web.bind.annotation.RequestParam(required = false) Boolean idNegate,
+            @org.springframework.web.bind.annotation.RequestParam(required = false) Boolean isVerifiedInvestor,
+            @org.springframework.web.bind.annotation.RequestParam(required = false) Boolean isVerifiedInvestorNegate,
+            @org.springframework.web.bind.annotation.RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME) java.time.LocalDateTime updatedAtFrom,
+            @org.springframework.web.bind.annotation.RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME) java.time.LocalDateTime updatedAtTo,
+            @org.springframework.web.bind.annotation.RequestParam(required = false) Boolean updatedAtNegate,
+
             @PageableDefault(page = 0, size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
 
         try {
@@ -146,7 +157,9 @@ public class AdminController {
                     createdAtFrom != null || createdAtTo != null ||
                     lastLoginFrom != null || lastLoginTo != null ||
                     hasInvestorProfile != null || hasStartups != null || isMemberOfStartups != null ||
-                    isSuspended != null || minWarningCount != null || hasActiveSession != null;
+                    hasInvestorProfile != null || hasStartups != null || isMemberOfStartups != null ||
+                    isSuspended != null || minWarningCount != null || hasActiveSession != null ||
+                    id != null || updatedAtFrom != null || updatedAtTo != null || isVerifiedInvestor != null;
 
             System.out.println("DEBUG: hasAdvancedFilters: " + hasAdvancedFilters);
 
@@ -188,6 +201,13 @@ public class AdminController {
                         .minWarningCountNegate(minWarningCountNegate)
                         .hasActiveSession(hasActiveSession)
                         .hasActiveSessionNegate(hasActiveSessionNegate)
+                        .id(id)
+                        .idNegate(idNegate)
+                        .isVerifiedInvestor(isVerifiedInvestor)
+                        .isVerifiedInvestorNegate(isVerifiedInvestorNegate)
+                        .updatedAtFrom(updatedAtFrom)
+                        .updatedAtTo(updatedAtTo)
+                        .updatedAtNegate(updatedAtNegate)
                         .build();
 
                 usersPage = userRepository.findAll(UserSpecification.buildSpecification(filter), pageable);

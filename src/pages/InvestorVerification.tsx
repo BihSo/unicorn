@@ -47,7 +47,7 @@ import {
     InvestorVerification,
     InvestorStats
 } from '../lib/api'
-import { formatDate, formatCurrency } from '../lib/utils'
+import { formatDate, formatCurrency, formatCompactCurrency } from '../lib/utils'
 import { toast } from 'sonner'
 import {
     Dialog,
@@ -201,13 +201,7 @@ export function InvestorVerificationPage() {
 
     return (
         <div className="space-y-6 transition-colors duration-300">
-            {/* Header Section */}
-            <div className="flex flex-col gap-1">
-                <h1 className="text-3xl font-bold tracking-tight text-foreground">Investor Verification</h1>
-                <p className="text-muted-foreground text-lg">
-                    Review and approve investor verification requests before payment processing.
-                </p>
-            </div>
+
 
             {error && (
                 <Alert variant="destructive">
@@ -239,7 +233,7 @@ export function InvestorVerificationPage() {
                 />
                 <KPICard
                     title="Total Capital"
-                    value={formatCurrency(stats?.totalInvestmentBudget || 0)}
+                    value={formatCompactCurrency(stats?.totalInvestmentBudget || 0)}
                     icon={DollarSign}
                     iconColor="text-indigo-600 dark:text-indigo-400"
                 />
@@ -571,19 +565,18 @@ export function InvestorVerificationPage() {
                                 </div>
 
                                 {/* Bio */}
-                                {selectedInvestor.bio && (
-                                    <div className="group p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:shadow-md transition-all duration-300 flex items-start gap-4">
-                                        <div className="h-10 w-10 rounded-lg bg-blue-500/10 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform text-blue-600">
-                                            <Briefcase className="h-5 w-5" />
-                                        </div>
-                                        <div className="flex-1">
-                                            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">Bio</p>
-                                            <p className="text-sm text-foreground/80 whitespace-pre-wrap leading-relaxed">
-                                                {selectedInvestor.bio}
-                                            </p>
-                                        </div>
+                                {/* Bio */}
+                                <div className="group p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:shadow-md transition-all duration-300 flex items-start gap-4">
+                                    <div className="h-10 w-10 rounded-lg bg-blue-500/10 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform text-blue-600">
+                                        <Briefcase className="h-5 w-5" />
                                     </div>
-                                )}
+                                    <div className="flex-1">
+                                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">Bio</p>
+                                        <p className="text-sm text-foreground/80 whitespace-pre-wrap leading-relaxed">
+                                            {selectedInvestor.bio || <span className="text-muted-foreground italic">Not provided</span>}
+                                        </p>
+                                    </div>
+                                </div>
 
                                 {/* Preferred Industries */}
                                 {selectedInvestor.preferredIndustries && (
@@ -606,13 +599,13 @@ export function InvestorVerificationPage() {
 
                                 {/* LinkedIn & Request Date Grid */}
                                 <div className="grid grid-cols-2 gap-4">
-                                    {selectedInvestor.linkedInUrl && (
-                                        <div className="group p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:shadow-md transition-all duration-300 flex items-start gap-4">
-                                            <div className="h-10 w-10 rounded-lg bg-blue-500/10 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform text-blue-600">
-                                                <ExternalLink className="h-5 w-5" />
-                                            </div>
-                                            <div className="flex-1">
-                                                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">LinkedIn</p>
+                                    <div className="group p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:shadow-md transition-all duration-300 flex items-start gap-4">
+                                        <div className="h-10 w-10 rounded-lg bg-blue-500/10 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform text-blue-600">
+                                            <ExternalLink className="h-5 w-5" />
+                                        </div>
+                                        <div className="flex-1">
+                                            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">LinkedIn</p>
+                                            {selectedInvestor.linkedInUrl ? (
                                                 <a
                                                     href={selectedInvestor.linkedInUrl.startsWith('http') ? selectedInvestor.linkedInUrl : `https://www.linkedin.com/in/${selectedInvestor.linkedInUrl}`}
                                                     target="_blank"
@@ -622,9 +615,12 @@ export function InvestorVerificationPage() {
                                                     View Profile
                                                     <ExternalLink className="h-3 w-3" />
                                                 </a>
-                                            </div>
+                                            ) : (
+                                                <span className="text-sm text-muted-foreground italic">Not provided</span>
+                                            )}
                                         </div>
-                                    )}
+                                    </div>
+
 
                                     <div className="group p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:shadow-md transition-all duration-300 flex items-start gap-4">
                                         <div className="h-10 w-10 rounded-lg bg-amber-500/10 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform text-amber-600">

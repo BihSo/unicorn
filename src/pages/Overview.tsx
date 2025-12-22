@@ -63,13 +63,7 @@ export function Overview() {
 
     return (
         <div className="space-y-6">
-            {/* Page Header */}
-            <div>
-                <h1 className="text-3xl font-bold tracking-tight">Dashboard Overview</h1>
-                <p className="text-muted-foreground mt-2">
-                    Welcome back! Here's what's happening with your platform today.
-                </p>
-            </div>
+
 
             {/* KPI Cards */}
             {stats && (

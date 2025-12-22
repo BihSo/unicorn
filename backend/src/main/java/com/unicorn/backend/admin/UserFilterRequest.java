@@ -20,6 +20,10 @@ public class UserFilterRequest {
     // Global Search
     private String globalQuery;
 
+    // ID Filter
+    private String id;
+    private Boolean idNegate;
+
     // Text Filters
     private String email;
     private Boolean emailNegate;
@@ -65,6 +69,10 @@ public class UserFilterRequest {
     private LocalDateTime suspendedAtTo;
     private Boolean suspendedAtNegate;
 
+    private LocalDateTime updatedAtFrom;
+    private LocalDateTime updatedAtTo;
+    private Boolean updatedAtNegate;
+
     // Boolean Filters
     private Boolean hasInvestorProfile;
     private Boolean hasInvestorProfileNegate;
@@ -99,6 +107,7 @@ public class UserFilterRequest {
                 suspendedAtFrom != null || suspendedAtTo != null ||
                 hasInvestorProfile != null || hasStartups != null || isMemberOfStartups != null ||
                 isVerifiedInvestor != null || isSuspended != null ||
-                minWarningCount != null || hasActiveSession != null;
+                minWarningCount != null || hasActiveSession != null ||
+                id != null || updatedAtFrom != null || updatedAtTo != null;
     }
 }

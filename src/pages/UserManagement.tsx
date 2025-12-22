@@ -37,13 +37,7 @@ export function UserManagement() {
 
     return (
         <div className="space-y-6">
-            {/* Page Header */}
-            <div>
-                <h1 className="text-3xl font-bold tracking-tight">User Management</h1>
-                <p className="text-muted-foreground mt-2">
-                    Manage investors and startups on the platform
-                </p>
-            </div>
+
 
             {/* Statistics Cards */}
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">

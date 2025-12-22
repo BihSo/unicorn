@@ -102,7 +102,7 @@ public class InvestorVerificationController {
                         List<InvestorProfile> queue = investorProfileRepository.findPendingVerificationQueue();
                         long queueCount = queue.size();
 
-                        java.math.BigDecimal totalBudget = investorProfileRepository.sumInvestmentBudget();
+                        java.math.BigDecimal totalBudget = investorProfileRepository.sumVerifiedInvestmentBudget();
 
                         return ResponseEntity.ok(InvestorStatsResponse.builder()
                                         .totalInvestors(total)

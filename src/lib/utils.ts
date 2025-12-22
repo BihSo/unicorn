@@ -50,3 +50,12 @@ export function formatCurrency(amount: number) {
     currency: "USD",
   }).format(amount)
 }
+
+export function formatCompactCurrency(amount: number) {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    notation: "compact",
+    maximumFractionDigits: 1
+  }).format(amount)
+}

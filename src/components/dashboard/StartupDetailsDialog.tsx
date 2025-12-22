@@ -970,7 +970,7 @@ export function StartupDetailsDialog({
                 }
                 <UserDetailsModal
                     open={!!viewMemberId}
-                    onOpenChange={(open) => !open && setViewMemberId(null)}
+                    onOpenChange={(open: boolean) => !open && setViewMemberId(null)}
                     userId={viewMemberId}
                 />
             </DialogContent >

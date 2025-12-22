@@ -318,6 +318,25 @@ export function UsersTable() {
             if (filterState.hasActiveSessionNegate) params.append('hasActiveSessionNegate', 'true')
         }
 
+        // Recently Added Filters
+        if (filterState.id) {
+            params.append('id', filterState.id)
+            if (filterState.idNegate) params.append('idNegate', 'true')
+        }
+
+        if (filterState.isVerifiedInvestor !== undefined) {
+            params.append('isVerifiedInvestor', String(filterState.isVerifiedInvestor))
+            if (filterState.isVerifiedInvestorNegate) params.append('isVerifiedInvestorNegate', 'true')
+        }
+
+        if (filterState.updatedAtFrom) {
+            params.append('updatedAtFrom', new Date(filterState.updatedAtFrom).toISOString())
+        }
+        if (filterState.updatedAtTo) {
+            params.append('updatedAtTo', new Date(filterState.updatedAtTo).toISOString())
+        }
+        if (filterState.updatedAtNegate) params.append('updatedAtNegate', 'true')
+
         const queryString = params.toString()
         return queryString ? `${baseUrl}&${queryString}` : baseUrl
     }

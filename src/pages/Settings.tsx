@@ -130,12 +130,7 @@ export function Settings() {
 
     return (
         <div className="space-y-6">
-            <div>
-                <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
-                <p className="text-muted-foreground">
-                    Manage your preferences {isAdmin && 'and system configuration'}.
-                </p>
-            </div>
+
 
             <div className="flex space-x-2 border-b pb-2 overflow-x-auto">
                 <Button

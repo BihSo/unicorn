@@ -55,10 +55,10 @@ public interface InvestorProfileRepository extends JpaRepository<InvestorProfile
         long countVerifiedInvestors();
 
         /**
-         * Sum of investment budget across all profiles.
+         * Sum of investment budget for VERIFIED profiles only.
          */
-        @org.springframework.data.jpa.repository.Query("SELECT SUM(i.investmentBudget) FROM InvestorProfile i")
-        java.math.BigDecimal sumInvestmentBudget();
+        @org.springframework.data.jpa.repository.Query("SELECT SUM(i.investmentBudget) FROM InvestorProfile i WHERE i.isVerified = true")
+        java.math.BigDecimal sumVerifiedInvestmentBudget();
 
         /**
          * Find investors pending verification with pagination and optional search.
