@@ -94,7 +94,7 @@ export function Sidebar() {
             >
                 <div className="flex flex-col h-full">
                     {/* Logo Section */}
-                    <div className="min-h-[80px] lg:h-20 flex items-center px-6 pt-24 pb-6 lg:py-0 border-b border-slate-100/10 dark:border-slate-800/10 bg-gradient-to-b from-white/50 to-transparent dark:from-slate-900/50">
+                    <div className="min-h-[80px] lg:h-20 flex items-center pl-20 pr-6 pt-7 pb-6 lg:px-6 lg:py-0 border-b border-slate-100/10 dark:border-slate-800/10 bg-gradient-to-b from-white/50 to-transparent dark:from-slate-900/50">
                         <Link to="/" className="flex items-center gap-3 group">
                             <div className="h-10 w-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-xl shadow-lg shadow-blue-500/20 group-hover:shadow-blue-500/30 group-hover:scale-105 transition-all duration-300 ring-2 ring-white/20">
                                 🦄

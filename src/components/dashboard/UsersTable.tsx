@@ -6,7 +6,6 @@ import {
     ColumnDef,
     PaginationState,
 } from '@tanstack/react-table'
-import { Card, CardContent, CardHeader } from '../../components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table'
 import { Input } from '../../components/ui/input'
 import { Button } from '../../components/ui/button'
@@ -119,6 +118,7 @@ export function UsersTable() {
     // Filter State
     const [searchQuery, setSearchQuery] = useState('')
     const [debouncedQuery, setDebouncedQuery] = useState('')
+    const [roleFilter, setRoleFilter] = useState<string>('ALL')
     const [filters, setFilters] = useState<FilterState>({})
     const [appliedFilters, setAppliedFilters] = useState<FilterState>({})
 
@@ -350,6 +350,11 @@ export function UsersTable() {
                 url += `&query=${encodeURIComponent(debouncedQuery)}`
             }
 
+            // Add quick role filter
+            if (roleFilter !== 'ALL') {
+                url += `&role=${roleFilter}`
+            }
+
             // Add advanced filters
             url = buildFilterUrl(url, appliedFilters)
 
@@ -383,7 +388,7 @@ export function UsersTable() {
 
     useEffect(() => {
         fetchData()
-    }, [pageIndex, pageSize, debouncedQuery, appliedFilters])
+    }, [pageIndex, pageSize, debouncedQuery, roleFilter, appliedFilters])
 
     const getIcon = (role: string) => {
         const r = role?.toLowerCase() || ''
@@ -665,330 +670,343 @@ export function UsersTable() {
                 onClear={handleClearFilters}
             />
 
-            <Card>
-                <CardHeader className="bg-white/50 dark:bg-slate-900/50 border-b border-border/50 pb-4">
-                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                        <div className="flex items-center gap-3">
-                            <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                                <UserIcon className="h-5 w-5 text-primary" />
-                            </div>
-                            <div>
-                                <h2 className="text-lg font-bold tracking-tight">Users Management</h2>
-                                <div className="flex items-center gap-2">
-                                    {isLoading && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />}
-                                    <span className="text-xs text-muted-foreground font-medium">
-                                        {totalUsers} {totalUsers === 1 ? 'user' : 'users'} total
-                                    </span>
+            {/* Toolbar Section */}
+            <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center bg-white dark:bg-slate-900 p-4 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800">
+                {/* Role Tabs */}
+                <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-lg overflow-x-auto max-w-full no-scrollbar">
+                    {['ALL', 'ADMIN', 'INVESTOR', 'STARTUP_OWNER'].map((role) => (
+                        <button
+                            key={role}
+                            onClick={() => {
+                                setRoleFilter(role)
+                                setPagination(prev => ({ ...prev, pageIndex: 0 }))
+                            }}
+                            className={`
+                                px-4 py-1.5 rounded-md text-sm font-medium transition-all duration-200 whitespace-nowrap
+                                ${roleFilter === role
+                                    ? 'bg-white dark:bg-slate-700 text-foreground shadow-sm'
+                                    : 'text-slate-500 dark:text-slate-400 hover:text-foreground hover:bg-white/50 dark:hover:bg-slate-700/50'}
+                            `}
+                        >
+                            {role === 'ALL' ? 'All' : role === 'STARTUP_OWNER' ? 'Startup Owner' : role.charAt(0) + role.slice(1).toLowerCase()}
+                        </button>
+                    ))}
+                </div>
+
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
+                    <div className="relative flex-1 sm:w-64">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                            placeholder="Search by email..."
+                            className="pl-9 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800"
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                        />
+                    </div>
+
+                    <div className="flex gap-2">
+                        <Button
+                            variant="outline"
+                            size="icon"
+                            onClick={fetchData}
+                            disabled={isLoading}
+                            className="shrink-0 bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700"
+                            title="Refresh List"
+                        >
+                            <RotateCcw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+                        </Button>
+
+                        {/* Export Dropdown */}
+                        <Dialog open={exportDialogOpen} onOpenChange={setExportDialogOpen}>
+                            <DialogTrigger asChild>
+                                <Button variant="outline" className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:bg-slate-50 gap-2">
+                                    <Download className="h-4 w-4" />
+                                    <span className="hidden sm:inline">Export</span>
+                                </Button>
+                            </DialogTrigger>
+                            <DialogContent className="sm:max-w-[500px] max-h-[85vh] overflow-hidden flex flex-col p-0 gap-0 border-none shadow-2xl bg-white dark:bg-slate-950">
+                                <div className="bg-gradient-to-r from-slate-800 via-blue-900/50 to-indigo-900/50 dark:from-slate-900 dark:via-blue-950/80 dark:to-indigo-950/80 p-6 border-b border-slate-700/50 shrink-0">
+                                    <DialogHeader className="space-y-2">
+                                        <DialogTitle className="flex items-center gap-3 text-2xl font-bold tracking-tight text-white">
+                                            <div className="h-12 w-12 rounded-2xl bg-white/20 shadow-lg flex items-center justify-center backdrop-blur-sm">
+                                                <Download className="h-6 w-6 text-white" />
+                                            </div>
+                                            Export Users
+                                        </DialogTitle>
+                                        <DialogDescription className="text-white/80">
+                                            Download user data as a CSV file. Select your scope and custom columns below.
+                                        </DialogDescription>
+                                    </DialogHeader>
                                 </div>
-                            </div>
-                        </div>
 
-                        <div className="flex flex-col sm:flex-row gap-2">
-                            <div className="relative">
-                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                <Input
-                                    placeholder="Search by email..."
-                                    className="pl-9 w-full sm:w-[250px] bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800"
-                                    value={searchQuery}
-                                    onChange={(e) => setSearchQuery(e.target.value)}
-                                />
-                            </div>
-
-                            <div className="flex gap-2">
-                                <Button
-                                    variant="outline"
-                                    size="icon"
-                                    onClick={fetchData}
-                                    disabled={isLoading}
-                                    className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:bg-slate-50"
-                                    title="Refresh List"
-                                >
-                                    <RotateCcw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
-                                </Button>
-
-                                {/* Export Dropdown */}
-                                <Dialog open={exportDialogOpen} onOpenChange={setExportDialogOpen}>
-                                    <DialogTrigger asChild>
-                                        <Button variant="outline" className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:bg-slate-50 gap-2">
-                                            <Download className="h-4 w-4" />
-                                            <span className="hidden sm:inline">Export</span>
-                                        </Button>
-                                    </DialogTrigger>
-                                    <DialogContent className="sm:max-w-[500px] max-h-[85vh] overflow-hidden flex flex-col p-0 gap-0 border-none shadow-2xl bg-white dark:bg-slate-950">
-                                        <div className="bg-gradient-to-r from-slate-800 via-blue-900/50 to-indigo-900/50 dark:from-slate-900 dark:via-blue-950/80 dark:to-indigo-950/80 p-6 border-b border-slate-700/50 shrink-0">
-                                            <DialogHeader className="space-y-2">
-                                                <DialogTitle className="flex items-center gap-3 text-2xl font-bold tracking-tight text-white">
-                                                    <div className="h-12 w-12 rounded-2xl bg-white/20 shadow-lg flex items-center justify-center backdrop-blur-sm">
-                                                        <Download className="h-6 w-6 text-white" />
-                                                    </div>
-                                                    Export Users
-                                                </DialogTitle>
-                                                <DialogDescription className="text-white/80">
-                                                    Download user data as a CSV file. Select your scope and custom columns below.
-                                                </DialogDescription>
-                                            </DialogHeader>
-                                        </div>
-
-                                        <div className="overflow-y-auto p-6 space-y-8 custom-scrollbar">
-                                            {/* Scope Selection */}
-                                            <div className="space-y-4">
-                                                <h4 className="text-sm font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-                                                    <Filter className="h-4 w-4" />
-                                                    Export Scope
-                                                </h4>
-                                                <RadioGroup
-                                                    value={exportScope}
-                                                    onValueChange={(v) => setExportScope(v as 'current' | 'all')}
-                                                    className="grid grid-cols-1 sm:grid-cols-2 gap-4"
-                                                >
-                                                    <label className={`
-                                                        relative flex flex-col gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all duration-200
-                                                        hover:shadow-md
-                                                        ${exportScope === 'current'
-                                                            ? 'border-emerald-500 bg-emerald-50/50 dark:bg-emerald-900/10 dark:border-emerald-500/50'
-                                                            : 'border-border bg-card hover:border-emerald-200 dark:hover:border-emerald-800'
-                                                        }
-                                                    `}>
-                                                        <div className="flex items-center justify-between">
-                                                            <div className={`p-2 rounded-lg ${exportScope === 'current' ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20' : 'bg-muted text-muted-foreground'}`}>
-                                                                <TableIcon className="h-5 w-5" />
-                                                            </div>
-                                                            <RadioGroupItem value="current" id="scope-current" className="sr-only" />
-                                                            {exportScope === 'current' && (
-                                                                <div className="h-5 w-5 rounded-full bg-emerald-500 text-white flex items-center justify-center animate-in zoom-in">
-                                                                    <div className="h-2 w-2 rounded-full bg-white" />
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                        <div>
-                                                            <span className={`font-bold block ${exportScope === 'current' ? 'text-emerald-700 dark:text-emerald-300' : 'text-foreground'}`}>Current Page</span>
-                                                            <span className="text-xs text-muted-foreground mt-1 block">
-                                                                Export only visible {data.length} rows
-                                                            </span>
-                                                        </div>
-                                                    </label>
-
-                                                    <label className={`
-                                                        relative flex flex-col gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all duration-200
-                                                        hover:shadow-md
-                                                        ${exportScope === 'all'
-                                                            ? 'border-indigo-500 bg-indigo-50/50 dark:bg-indigo-900/10 dark:border-indigo-500/50'
-                                                            : 'border-border bg-card hover:border-indigo-200 dark:hover:border-indigo-800'
-                                                        }
-                                                    `}>
-                                                        <div className="flex items-center justify-between">
-                                                            <div className={`p-2 rounded-lg ${exportScope === 'all' ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-500/20' : 'bg-muted text-muted-foreground'}`}>
-                                                                <Database className="h-5 w-5" />
-                                                            </div>
-                                                            <RadioGroupItem value="all" id="scope-all" className="sr-only" />
-                                                            {exportScope === 'all' && (
-                                                                <div className="h-5 w-5 rounded-full bg-indigo-500 text-white flex items-center justify-center animate-in zoom-in">
-                                                                    <div className="h-2 w-2 rounded-full bg-white" />
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                        <div>
-                                                            <span className={`font-bold block ${exportScope === 'all' ? 'text-indigo-700 dark:text-indigo-300' : 'text-foreground'}`}>All Matching</span>
-                                                            <span className="text-xs text-muted-foreground mt-1 block">
-                                                                All records matching filters
-                                                            </span>
-                                                        </div>
-                                                    </label>
-                                                </RadioGroup>
-                                            </div>
-
-                                            {/* Column Selection */}
-                                            <div className="space-y-4">
-                                                <div className="flex items-center justify-between">
-                                                    <h4 className="text-sm font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-                                                        <TableIcon className="h-4 w-4" />
-                                                        Columns
-                                                    </h4>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        className="h-8 text-xs font-medium text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/20"
-                                                        onClick={(e) => {
-                                                            e.preventDefault();
-                                                            handleSelectAllColumns(selectedColumns.length !== EXPORTABLE_COLUMNS.length);
-                                                        }}
-                                                    >
-                                                        {selectedColumns.length === EXPORTABLE_COLUMNS.length ? 'Deselect All' : 'Select All'}
-                                                    </Button>
-                                                </div>
-                                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 border rounded-xl p-4 bg-slate-50/50 dark:bg-slate-900/50 max-h-[220px] overflow-y-auto custom-scrollbar">
-                                                    {EXPORTABLE_COLUMNS.map((col) => (
-                                                        <div key={col.id} className="group flex items-center space-x-2.5 p-2 rounded-lg hover:bg-white dark:hover:bg-slate-800 border border-transparent hover:border-border transition-all">
-                                                            <Checkbox
-                                                                id={`col-${col.id}`}
-                                                                checked={selectedColumns.includes(col.id)}
-                                                                onCheckedChange={(checked) => handleColumnToggle(col.id, checked as boolean)}
-                                                                className="data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
-                                                            />
-                                                            <Label
-                                                                htmlFor={`col-${col.id}`}
-                                                                className="text-sm text-muted-foreground group-hover:text-foreground cursor-pointer truncate flex-1 font-medium transition-colors"
-                                                                title={col.label}
-                                                            >
-                                                                {col.label}
-                                                            </Label>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                                <p className="text-xs text-muted-foreground text-right px-1 flex justify-end gap-1">
-                                                    <span className="font-semibold text-foreground">{selectedColumns.length}</span> columns selected
-                                                </p>
-                                            </div>
-                                        </div>
-
-                                        <DialogFooter className="border-t p-6 bg-muted/20 shrink-0">
-                                            <Button variant="ghost" onClick={() => setExportDialogOpen(false)} className="hover:bg-muted font-medium">
-                                                Cancel
-                                            </Button>
-                                            <Button
-                                                onClick={performExport}
-                                                disabled={isExporting || selectedColumns.length === 0}
-                                                className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-md hover:shadow-lg transition-all gap-2 px-6"
-                                            >
-                                                {isExporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-                                                {isExporting ? 'Exporting...' : 'Export CSV'}
-                                            </Button>
-                                        </DialogFooter>
-                                    </DialogContent>
-                                </Dialog>
-
-                                <Button
-                                    className="gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-md transition-all hover:shadow-lg"
-                                    onClick={() => setAddAdminOpen(true)}
-                                    disabled={!isSuperAdmin}
-                                    title={!isSuperAdmin ? "Only Super Admin can create new admins" : "Create New Admin"}
-                                >
-                                    <UserPlus className="h-4 w-4" />
-                                    <span className="hidden sm:inline">New Admin</span>
-                                </Button>
-                            </div>
-                        </div>
-                    </div>
-                </CardHeader>
-                <CardContent>
-                    <div className="rounded-md border mt-4">
-                        <Table>
-                            <TableHeader>
-                                {table.getHeaderGroups().map(headerGroup => (
-                                    <TableRow key={headerGroup.id}>
-                                        {headerGroup.headers.map(header => (
-                                            <TableHead key={header.id}>
-                                                {header.isPlaceholder
-                                                    ? null
-                                                    : flexRender(
-                                                        header.column.columnDef.header,
-                                                        header.getContext()
-                                                    )}
-                                            </TableHead>
-                                        ))}
-                                    </TableRow>
-                                ))}
-                            </TableHeader>
-                            <TableBody>
-                                {isLoading ? (
-                                    Array.from({ length: pageSize }).map((_, i) => (
-                                        <TableRow key={i}>
-                                            <TableCell colSpan={columns.length}><div className="h-10 bg-muted/20 rounded animate-pulse" /></TableCell>
-                                        </TableRow>
-                                    ))
-                                ) : table.getRowModel().rows.length > 0 ? (
-                                    table.getRowModel().rows.map(row => (
-                                        <TableRow
-                                            key={row.id}
-                                            className="cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800/50 transition-colors"
-                                            onClick={() => handleViewDetails(row.original.id)}
+                                <div className="overflow-y-auto p-6 space-y-8 custom-scrollbar">
+                                    {/* Scope Selection */}
+                                    <div className="space-y-4">
+                                        <h4 className="text-sm font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+                                            <Filter className="h-4 w-4" />
+                                            Export Scope
+                                        </h4>
+                                        <RadioGroup
+                                            value={exportScope}
+                                            onValueChange={(v) => setExportScope(v as 'current' | 'all')}
+                                            className="grid grid-cols-1 sm:grid-cols-2 gap-4"
                                         >
-                                            {row.getVisibleCells().map(cell => (
-                                                <TableCell key={cell.id}>
-                                                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                                                </TableCell>
-                                            ))}
-                                        </TableRow>
-                                    ))
-                                ) : (
-                                    <TableRow>
-                                        <TableCell colSpan={columns.length} className="h-24 text-center">
-                                            No users found.
-                                        </TableCell>
-                                    </TableRow>
-                                )}
-                            </TableBody>
-                        </Table>
-                    </div>
+                                            <label className={`
+                                                relative flex flex-col gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all duration-200
+                                                hover:shadow-md
+                                                ${exportScope === 'current'
+                                                    ? 'border-emerald-500 bg-emerald-50/50 dark:bg-emerald-900/10 dark:border-emerald-500/50'
+                                                    : 'border-border bg-card hover:border-emerald-200 dark:hover:border-emerald-800'
+                                                }
+                                            `}>
+                                                <div className="flex items-center justify-between">
+                                                    <div className={`p-2 rounded-lg ${exportScope === 'current' ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20' : 'bg-muted text-muted-foreground'}`}>
+                                                        <TableIcon className="h-5 w-5" />
+                                                    </div>
+                                                    <RadioGroupItem value="current" id="scope-current" className="sr-only" />
+                                                    {exportScope === 'current' && (
+                                                        <div className="h-5 w-5 rounded-full bg-emerald-500 text-white flex items-center justify-center animate-in zoom-in">
+                                                            <div className="h-2 w-2 rounded-full bg-white" />
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                <div>
+                                                    <span className={`font-bold block ${exportScope === 'current' ? 'text-emerald-700 dark:text-emerald-300' : 'text-foreground'}`}>Current Page</span>
+                                                    <span className="text-xs text-muted-foreground mt-1 block">
+                                                        Export only visible {data.length} rows
+                                                    </span>
+                                                </div>
+                                            </label>
 
-                    {/* Pagination Controls */}
-                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 px-2 py-4">
-                        <div className="text-sm text-muted-foreground">
-                            Showing {table.getState().pagination.pageIndex * table.getState().pagination.pageSize + 1} to {Math.min((table.getState().pagination.pageIndex + 1) * table.getState().pagination.pageSize, totalUsers)} of {totalUsers} entries
-                        </div>
-                        <div className="flex flex-wrap items-center gap-4 lg:gap-6">
-                            <div className="flex items-center space-x-2">
-                                <p className="text-sm font-medium">Rows per page</p>
-                                <Select
-                                    value={`${table.getState().pagination.pageSize}`}
-                                    onValueChange={(value) => {
-                                        table.setPageSize(Number(value))
-                                    }}
-                                >
-                                    <SelectTrigger className="h-8 w-[70px]">
-                                        <SelectValue placeholder={table.getState().pagination.pageSize} />
-                                    </SelectTrigger>
-                                    <SelectContent side="top">
-                                        {[10, 20, 50, 100, 200, 500].map((pageSize) => (
-                                            <SelectItem key={pageSize} value={`${pageSize}`}>
-                                                {pageSize}
-                                            </SelectItem>
+                                            <label className={`
+                                                relative flex flex-col gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all duration-200
+                                                hover:shadow-md
+                                                ${exportScope === 'all'
+                                                    ? 'border-indigo-500 bg-indigo-50/50 dark:bg-indigo-900/10 dark:border-indigo-500/50'
+                                                    : 'border-border bg-card hover:border-indigo-200 dark:hover:border-indigo-800'
+                                                }
+                                            `}>
+                                                <div className="flex items-center justify-between">
+                                                    <div className={`p-2 rounded-lg ${exportScope === 'all' ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-500/20' : 'bg-muted text-muted-foreground'}`}>
+                                                        <Database className="h-5 w-5" />
+                                                    </div>
+                                                    <RadioGroupItem value="all" id="scope-all" className="sr-only" />
+                                                    {exportScope === 'all' && (
+                                                        <div className="h-5 w-5 rounded-full bg-indigo-500 text-white flex items-center justify-center animate-in zoom-in">
+                                                            <div className="h-2 w-2 rounded-full bg-white" />
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                <div>
+                                                    <span className={`font-bold block ${exportScope === 'all' ? 'text-indigo-700 dark:text-indigo-300' : 'text-foreground'}`}>All Matching</span>
+                                                    <span className="text-xs text-muted-foreground mt-1 block">
+                                                        All records matching filters
+                                                    </span>
+                                                </div>
+                                            </label>
+                                        </RadioGroup>
+                                    </div>
+
+                                    {/* Column Selection */}
+                                    <div className="space-y-4">
+                                        <div className="flex items-center justify-between">
+                                            <h4 className="text-sm font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+                                                <TableIcon className="h-4 w-4" />
+                                                Columns
+                                            </h4>
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                className="h-8 text-xs font-medium text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/20"
+                                                onClick={(e) => {
+                                                    e.preventDefault();
+                                                    handleSelectAllColumns(selectedColumns.length !== EXPORTABLE_COLUMNS.length);
+                                                }}
+                                            >
+                                                {selectedColumns.length === EXPORTABLE_COLUMNS.length ? 'Deselect All' : 'Select All'}
+                                            </Button>
+                                        </div>
+                                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 border rounded-xl p-4 bg-slate-50/50 dark:bg-slate-900/50 max-h-[220px] overflow-y-auto custom-scrollbar">
+                                            {EXPORTABLE_COLUMNS.map((col) => (
+                                                <div key={col.id} className="group flex items-center space-x-2.5 p-2 rounded-lg hover:bg-white dark:hover:bg-slate-800 border border-transparent hover:border-border transition-all">
+                                                    <Checkbox
+                                                        id={`col-${col.id}`}
+                                                        checked={selectedColumns.includes(col.id)}
+                                                        onCheckedChange={(checked) => handleColumnToggle(col.id, checked as boolean)}
+                                                        className="data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
+                                                    />
+                                                    <Label
+                                                        htmlFor={`col-${col.id}`}
+                                                        className="text-sm text-muted-foreground group-hover:text-foreground cursor-pointer truncate flex-1 font-medium transition-colors"
+                                                        title={col.label}
+                                                    >
+                                                        {col.label}
+                                                    </Label>
+                                                </div>
+                                            ))}
+                                        </div>
+                                        <p className="text-xs text-muted-foreground text-right px-1 flex justify-end gap-1">
+                                            <span className="font-semibold text-foreground">{selectedColumns.length}</span> columns selected
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <DialogFooter className="border-t p-6 bg-muted/20 shrink-0">
+                                    <Button variant="ghost" onClick={() => setExportDialogOpen(false)} className="hover:bg-muted font-medium">
+                                        Cancel
+                                    </Button>
+                                    <Button
+                                        onClick={performExport}
+                                        disabled={isExporting || selectedColumns.length === 0}
+                                        className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-md hover:shadow-lg transition-all gap-2 px-6"
+                                    >
+                                        {isExporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                                        {isExporting ? 'Exporting...' : 'Export CSV'}
+                                    </Button>
+                                </DialogFooter>
+                            </DialogContent>
+                        </Dialog>
+
+                        <Button
+                            className="gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-md transition-all hover:shadow-lg"
+                            onClick={() => setAddAdminOpen(true)}
+                            disabled={!isSuperAdmin}
+                            title={!isSuperAdmin ? "Only Super Admin can create new admins" : "Create New Admin"}
+                        >
+                            <UserPlus className="h-4 w-4" />
+                            <span className="hidden sm:inline">New Admin</span>
+                        </Button>
+                    </div>
+                </div>
+            </div>
+
+            {/* Table Section */}
+            <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
+                <div className="overflow-x-auto">
+                    <Table>
+                        <TableHeader className="bg-slate-50 dark:bg-slate-800/50">
+                            {table.getHeaderGroups().map(headerGroup => (
+                                <TableRow key={headerGroup.id} className="hover:bg-transparent border-b-border">
+                                    {headerGroup.headers.map(header => (
+                                        <TableHead key={header.id} className="font-semibold text-muted-foreground">
+                                            {header.isPlaceholder
+                                                ? null
+                                                : flexRender(
+                                                    header.column.columnDef.header,
+                                                    header.getContext()
+                                                )}
+                                        </TableHead>
+                                    ))}
+                                </TableRow>
+                            ))}
+                        </TableHeader>
+                        <TableBody>
+                            {isLoading ? (
+                                Array.from({ length: pageSize }).map((_, i) => (
+                                    <TableRow key={i}>
+                                        <TableCell colSpan={columns.length}><div className="h-10 bg-muted/20 rounded animate-pulse" /></TableCell>
+                                    </TableRow>
+                                ))
+                            ) : table.getRowModel().rows.length > 0 ? (
+                                table.getRowModel().rows.map(row => (
+                                    <TableRow
+                                        key={row.id}
+                                        className="group cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800/50 transition-colors border-b-border"
+                                        onClick={() => handleViewDetails(row.original.id)}
+                                    >
+                                        {row.getVisibleCells().map(cell => (
+                                            <TableCell key={cell.id} className="py-4">
+                                                {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                                            </TableCell>
                                         ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                                <Button
-                                    variant="outline"
-                                    className="hidden h-8 w-8 p-0 lg:flex"
-                                    onClick={() => table.setPageIndex(0)}
-                                    disabled={!table.getCanPreviousPage()}
-                                >
-                                    <span className="sr-only">Go to first page</span>
-                                    <ChevronsLeft className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                    variant="outline"
-                                    className="h-8 w-8 p-0"
-                                    onClick={() => table.previousPage()}
-                                    disabled={!table.getCanPreviousPage()}
-                                >
-                                    <span className="sr-only">Go to previous page</span>
-                                    <ChevronLeft className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                    variant="outline"
-                                    className="h-8 w-8 p-0"
-                                    onClick={() => table.nextPage()}
-                                    disabled={!table.getCanNextPage()}
-                                >
-                                    <span className="sr-only">Go to next page</span>
-                                    <ChevronRight className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                    variant="outline"
-                                    className="hidden h-8 w-8 p-0 lg:flex"
-                                    onClick={() => table.setPageIndex(table.getPageCount() - 1)}
-                                    disabled={!table.getCanNextPage()}
-                                >
-                                    <span className="sr-only">Go to last page</span>
-                                    <ChevronsRight className="h-4 w-4" />
-                                </Button>
-                            </div>
+                                    </TableRow>
+                                ))
+                            ) : (
+                                <TableRow>
+                                    <TableCell colSpan={columns.length} className="h-24 text-center">
+                                        <div className="flex flex-col items-center justify-center py-10 text-center">
+                                            <div className="h-16 w-16 bg-muted rounded-full flex items-center justify-center mb-4">
+                                                <UserIcon className="h-8 w-8 text-muted-foreground" />
+                                            </div>
+                                            <h3 className="text-lg font-semibold text-foreground">No users found</h3>
+                                            <p className="text-muted-foreground max-w-sm mx-auto mt-1">
+                                                No users match your current filters. Try adjusting them.
+                                            </p>
+                                        </div>
+                                    </TableCell>
+                                </TableRow>
+                            )}
+                        </TableBody>
+                    </Table>
+                </div>
+
+                {/* Pagination Footer */}
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 px-4 py-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50">
+                    <div className="text-sm text-muted-foreground">
+                        Showing {table.getState().pagination.pageIndex * table.getState().pagination.pageSize + 1} to {Math.min((table.getState().pagination.pageIndex + 1) * table.getState().pagination.pageSize, totalUsers)} of {totalUsers} entries
+                    </div>
+                    <div className="flex flex-wrap items-center gap-4 lg:gap-6">
+                        <div className="flex items-center space-x-2">
+                            <p className="text-sm font-medium">Rows per page</p>
+                            <Select
+                                value={`${table.getState().pagination.pageSize}`}
+                                onValueChange={(value) => {
+                                    table.setPageSize(Number(value))
+                                }}
+                            >
+                                <SelectTrigger className="h-8 w-[70px]">
+                                    <SelectValue placeholder={table.getState().pagination.pageSize} />
+                                </SelectTrigger>
+                                <SelectContent side="top">
+                                    {[10, 20, 50, 100, 200, 500].map((pageSize) => (
+                                        <SelectItem key={pageSize} value={`${pageSize}`}>
+                                            {pageSize}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                            <Button
+                                variant="outline"
+                                className="hidden h-8 w-8 p-0 lg:flex bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700"
+                                onClick={() => table.setPageIndex(0)}
+                                disabled={!table.getCanPreviousPage()}
+                            >
+                                <span className="sr-only">Go to first page</span>
+                                <ChevronsLeft className="h-4 w-4" />
+                            </Button>
+                            <Button
+                                variant="outline"
+                                className="h-8 w-8 p-0 bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700"
+                                onClick={() => table.previousPage()}
+                                disabled={!table.getCanPreviousPage()}
+                            >
+                                <span className="sr-only">Go to previous page</span>
+                                <ChevronLeft className="h-4 w-4" />
+                            </Button>
+                            <Button
+                                variant="outline"
+                                className="h-8 w-8 p-0 bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700"
+                                onClick={() => table.nextPage()}
+                                disabled={!table.getCanNextPage()}
+                            >
+                                <span className="sr-only">Go to next page</span>
+                                <ChevronRight className="h-4 w-4" />
+                            </Button>
+                            <Button
+                                variant="outline"
+                                className="hidden h-8 w-8 p-0 lg:flex bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700"
+                                onClick={() => table.setPageIndex(table.getPageCount() - 1)}
+                                disabled={!table.getCanNextPage()}
+                            >
+                                <span className="sr-only">Go to last page</span>
+                                <ChevronsRight className="h-4 w-4" />
+                            </Button>
                         </div>
                     </div>
-                </CardContent>
-            </Card>
+                </div>
+            </div>
 
             {/* Modals */}
             <UserDetailsModal
