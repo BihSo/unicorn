@@ -113,7 +113,6 @@ export function Deals() {
     useEffect(() => {
         loadDeals()
     }, [currentPage, pageSize, statusFilter])
-
     const loadStats = async () => {
         try {
             const data = await fetchDealStats()
