@@ -257,7 +257,7 @@ public class PaymentService {
             // We store the configured fee for record-keeping
             String feeStr = appConfigService.getValue("investor_verification_fee", "99.00");
             BigDecimal amount = new BigDecimal(feeStr);
-            String currency = appConfigService.getValue("default_currency", "EGP");
+            String currency = appConfigService.getValue("default_currency", "USD");
 
             // Create a payment record
             String orderId = purchase.getOrderId();

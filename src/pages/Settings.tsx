@@ -21,6 +21,8 @@ const CATEGORY_CONFIG: Record<string, { icon: React.ElementType; color: string; 
     preferences: { icon: Palette, color: 'text-indigo-500', gradient: 'from-indigo-500 to-purple-500', bgColor: 'bg-indigo-50 dark:bg-indigo-950/30' },
     fees: { icon: Percent, color: 'text-amber-500', gradient: 'from-amber-500 to-orange-500', bgColor: 'bg-amber-50 dark:bg-amber-950/30' },
     exchange_rates: { icon: Globe, color: 'text-blue-500', gradient: 'from-blue-500 to-cyan-500', bgColor: 'bg-blue-50 dark:bg-blue-950/30' },
+    verification: { icon: Sparkles, color: 'text-emerald-500', gradient: 'from-emerald-500 to-teal-500', bgColor: 'bg-emerald-50 dark:bg-emerald-950/30' },
+    system: { icon: Settings2, color: 'text-slate-500', gradient: 'from-slate-500 to-gray-600', bgColor: 'bg-slate-100 dark:bg-slate-950/30' },
 };
 
 export function Settings() {

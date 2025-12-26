@@ -180,7 +180,7 @@ public class AppConfigService {
         // System
         upsertIfNotExists("maintenance_mode", "false", "Enable maintenance mode", "system", "BOOLEAN");
         upsertIfNotExists("config_version", "1", "Configuration version for mobile app sync", "system", "NUMBER");
-        upsertIfNotExists("default_currency", "EGP", "Default currency for payments", "system", "TEXT");
+        upsertIfNotExists("default_currency", "USD", "Default currency for payments", "system", "TEXT");
 
         // Verification
         upsertIfNotExists("investor_verification_fee", "99.00", "Investor verification fee (for record-keeping)",
