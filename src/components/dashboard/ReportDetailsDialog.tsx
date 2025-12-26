@@ -39,6 +39,7 @@ import {
     Trash2,
     Gavel,
     Ban,
+    FileText,
 } from 'lucide-react'
 import { getReportDetails, Report, updateReportStatus, rejectReport } from '../../lib/api'
 import { formatDate } from '../../lib/utils'
@@ -46,6 +47,7 @@ import { toast } from 'sonner'
 import { Card, CardContent } from '../ui/card'
 import { UserDetailsModal } from './UserDetailsModal'
 import { StartupDetailsDialog } from './StartupDetailsDialog'
+import { PostDetailsDialog } from './PostDetailsDialog'
 import { ReportResolutionDialog } from './ReportResolutionDialog'
 import { Button } from '../ui/button'
 import {
@@ -88,6 +90,7 @@ export function ReportDetailsDialog({ reportId, open, onOpenChange, onReportUpda
     const [loading, setLoading] = useState(false)
     const [viewUserId, setViewUserId] = useState<string | null>(null)
     const [viewStartupId, setViewStartupId] = useState<string | null>(null)
+    const [viewPostId, setViewPostId] = useState<string | null>(null)
 
     // Action Dialog States for Startup
     const [warnStartupOpen, setWarnStartupOpen] = useState(false)
@@ -143,6 +146,14 @@ export function ReportDetailsDialog({ reportId, open, onOpenChange, onReportUpda
             setViewUserId(report.reportedEntityId)
         } else if (report.reportedEntityType === 'STARTUP') {
             setViewStartupId(report.reportedEntityId)
+        } else if (report.reportedEntityType === 'POST') {
+            setViewPostId(report.reportedEntityId)
+        } else if (report.reportedEntityType === 'COMMENT') {
+            // For comments, show a toast with the preview since we don't have a comment dialog
+            toast.info(`Comment: "${report.reportedContentPreview || 'No preview available'}"`, {
+                duration: 5000,
+                description: `Comment ID: ${report.reportedEntityId.substring(0, 8)}...`
+            })
         }
     }
 
@@ -474,7 +485,10 @@ export function ReportDetailsDialog({ reportId, open, onOpenChange, onReportUpda
                                                             {report.reportedEntityImage ? (
                                                                 <img src={report.reportedEntityImage} alt="Entity" className="h-full w-full object-cover" />
                                                             ) : (
-                                                                report.reportedEntityType === 'USER' ? <User className="h-7 w-7" /> : <Building2 className="h-7 w-7" />
+                                                                report.reportedEntityType === 'USER' ? <User className="h-7 w-7" /> :
+                                                                    report.reportedEntityType === 'STARTUP' ? <Building2 className="h-7 w-7" /> :
+                                                                        report.reportedEntityType === 'POST' ? <FileText className="h-7 w-7" /> :
+                                                                            <MessageSquare className="h-7 w-7" />
                                                             )}
                                                         </div>
                                                         <div className="absolute -bottom-1 -right-1 bg-background rounded-full p-0.5">
@@ -641,6 +655,16 @@ export function ReportDetailsDialog({ reportId, open, onOpenChange, onReportUpda
                 onActionComplete={() => {
                     // Refresh report if needed, though mostly unrelated unless status changed
                     if (reportId) loadReport()
+                }}
+            />
+
+            <PostDetailsDialog
+                postId={viewPostId || ''}
+                open={!!viewPostId}
+                onOpenChange={(open) => !open && setViewPostId(null)}
+                onPostUpdated={() => {
+                    if (reportId) loadReport()
+                    onReportUpdated?.()
                 }}
             />
 

@@ -424,7 +424,7 @@ export async function fetchSecurityStats(): Promise<SecurityStats> {
 export interface Report {
     id: string;
     reporterId: string;
-    reportedEntityType: 'USER' | 'STARTUP' | 'CHAT_MESSAGE';
+    reportedEntityType: 'USER' | 'STARTUP' | 'CHAT_MESSAGE' | 'POST' | 'COMMENT';
     reportedEntityId: string;
     reason: string;
     description: string;
@@ -443,6 +443,7 @@ export interface Report {
     reportedEntityName?: string;
     reportedEntityImage?: string;
     reportedEntityStatus?: string;
+    reportedContentPreview?: string;
     notifyReportedEntity?: boolean;
     reportedEntityNotified?: boolean;
 }
