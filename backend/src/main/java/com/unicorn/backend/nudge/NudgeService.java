@@ -1,6 +1,9 @@
 package com.unicorn.backend.nudge;
 
 import com.unicorn.backend.appconfig.AppConfigService;
+import com.unicorn.backend.notification.NotificationChannel;
+import com.unicorn.backend.notification.NotificationService;
+import com.unicorn.backend.notification.NotificationType;
 import com.unicorn.backend.startup.Startup;
 import com.unicorn.backend.startup.StartupRepository;
 import com.unicorn.backend.subscription.Subscription;
@@ -10,14 +13,15 @@ import com.unicorn.backend.user.User;
 import com.unicorn.backend.user.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -34,7 +38,7 @@ public class NudgeService {
     private final StartupRepository startupRepository;
     private final SubscriptionService subscriptionService;
     private final AppConfigService appConfigService;
-    private final SimpMessagingTemplate messagingTemplate;
+    private final NotificationService notificationService;
 
     // Default config values
     private static final int DEFAULT_FREE_MONTHLY_LIMIT = 4;
@@ -248,48 +252,26 @@ public class NudgeService {
     }
 
     /**
-     * Send real-time WebSocket notification to the nudge receiver.
+     * Send notification via centralized NotificationService.
      */
     private void sendNudgeNotification(Nudge nudge) {
-        try {
-            NudgeNotification notification = NudgeNotification.builder()
-                    .type("NUDGE")
-                    .senderName(nudge.getSender().getFirstName() != null
-                            ? nudge.getSender().getFirstName() + " " + nudge.getSender().getLastName()
-                            : nudge.getSender().getEmail().split("@")[0])
-                    .senderAvatarUrl(nudge.getSender().getAvatarUrl())
-                    .startupId(nudge.getStartup().getId().toString())
-                    .startupName(nudge.getStartup().getName())
-                    .startupLogoUrl(nudge.getStartup().getLogoUrl())
-                    .message("wants you to check out " + nudge.getStartup().getName())
-                    .timestamp(nudge.getCreatedAt())
-                    .build();
+        String senderName = nudge.getSender().getFirstName() != null
+                ? nudge.getSender().getFirstName() + " " + nudge.getSender().getLastName()
+                : nudge.getSender().getEmail().split("@")[0];
 
-            messagingTemplate.convertAndSendToUser(
-                    nudge.getReceiver().getUsername(),
-                    "/queue/nudge",
-                    notification);
-            log.debug("Nudge notification sent to user: {}", nudge.getReceiver().getUsername());
-        } catch (Exception e) {
-            log.error("Failed to send nudge notification: {}", e.getMessage());
-        }
-    }
+        Map<String, Object> data = Map.of(
+                "nudgeId", nudge.getId().toString(),
+                "startupId", nudge.getStartup().getId().toString(),
+                "startupName", nudge.getStartup().getName(),
+                "startupLogoUrl", nudge.getStartup().getLogoUrl() != null ? nudge.getStartup().getLogoUrl() : "");
 
-    /**
-     * Internal DTO for nudge notifications.
-     */
-    @lombok.Data
-    @lombok.Builder
-    @lombok.NoArgsConstructor
-    @lombok.AllArgsConstructor
-    private static class NudgeNotification {
-        private String type;
-        private String senderName;
-        private String senderAvatarUrl;
-        private String startupId;
-        private String startupName;
-        private String startupLogoUrl;
-        private String message;
-        private LocalDateTime timestamp;
+        notificationService.send(
+                nudge.getReceiver(),
+                NotificationType.NUDGE_RECEIVED,
+                senderName + " nudged you",
+                "wants you to check out " + nudge.getStartup().getName(),
+                data,
+                nudge.getSender(),
+                Set.of(NotificationChannel.IN_APP));
     }
 }
