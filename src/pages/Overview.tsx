@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react'
-import { KPICard } from '../components/dashboard/KPICard'
 import { RevenueChart } from '../components/dashboard/RevenueChart'
 import { UserGrowthChart } from '../components/dashboard/UserGrowthChart'
 import { StartupDistributionChart } from '../components/dashboard/StartupDistributionChart'
@@ -68,48 +67,86 @@ export function Overview() {
             {/* KPI Cards */}
             {stats && (
                 <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                    <KPICard
-                        title="Total Users"
-                        value={formatNumber(stats.totalUsers)}
-                        icon={Users}
-                        trend={stats.userGrowth}
-                        iconColor="text-blue-500"
-                    />
-                    <KPICard
-                        title="Active Startups"
-                        value={formatNumber(stats.activeStartups)}
-                        icon={Rocket}
-                        trend={stats.startupGrowth}
-                        iconColor="text-purple-500"
-                    />
-                    <KPICard
-                        title="Monthly Recurring Revenue"
-                        value={formatCurrency(stats.mrr)}
-                        icon={DollarSign}
-                        trend={stats.mrrGrowth}
-                        iconColor="text-emerald-500"
-                    />
-                    <KPICard
-                        title="Active Investors"
-                        value={formatNumber(stats.activeInvestors)}
-                        icon={Briefcase}
-                        trend={stats.investorGrowth}
-                        iconColor="text-orange-500"
-                    />
-                    <KPICard
-                        title="Pending Verifications"
-                        value={formatNumber(stats.pendingVerifications)}
-                        icon={Clock}
-                        trend={0}
-                        iconColor="text-yellow-500"
-                    />
-                    <KPICard
-                        title="Total Funding Raised"
-                        value={formatCurrency(stats.totalFunding)}
-                        icon={TrendingUp}
-                        trend={0}
-                        iconColor="text-indigo-500"
-                    />
+
+                    {/* Total Users */}
+                    <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 p-5 text-white shadow-lg">
+                        <div className="absolute top-0 right-0 -mt-4 -mr-4 h-24 w-24 rounded-full bg-white/10" />
+                        <Users className="h-8 w-8 mb-3 opacity-80" />
+                        <div className="text-3xl font-bold">{formatNumber(stats.totalUsers)}</div>
+                        <div className="text-blue-100 text-sm">Total Users</div>
+                        <div className="mt-3 pt-3 border-t border-white/20 flex items-center gap-2">
+                            <TrendingUp className="h-4 w-4 opacity-70" />
+                            <span className="text-sm">
+                                <strong>+{stats.userGrowth}%</strong> growth this month
+                            </span>
+                        </div>
+                    </div>
+
+                    {/* Active Startups */}
+                    <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-purple-500 to-violet-600 p-5 text-white shadow-lg">
+                        <div className="absolute top-0 right-0 -mt-4 -mr-4 h-24 w-24 rounded-full bg-white/10" />
+                        <Rocket className="h-8 w-8 mb-3 opacity-80" />
+                        <div className="text-3xl font-bold">{formatNumber(stats.activeStartups)}</div>
+                        <div className="text-purple-100 text-sm">Active Startups</div>
+                        <div className="mt-3 pt-3 border-t border-white/20 flex items-center gap-2">
+                            <TrendingUp className="h-4 w-4 opacity-70" />
+                            <span className="text-sm">
+                                <strong>+{stats.startupGrowth}%</strong> new this month
+                            </span>
+                        </div>
+                    </div>
+
+                    {/* MRR */}
+                    <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-emerald-500 to-green-600 p-5 text-white shadow-lg">
+                        <div className="absolute top-0 right-0 -mt-4 -mr-4 h-24 w-24 rounded-full bg-white/10" />
+                        <DollarSign className="h-8 w-8 mb-3 opacity-80" />
+                        <div className="text-3xl font-bold">{formatCurrency(stats.mrr)}</div>
+                        <div className="text-emerald-100 text-sm">Monthly Recurring Revenue</div>
+                        <div className="mt-3 pt-3 border-t border-white/20 flex items-center gap-2">
+                            <TrendingUp className="h-4 w-4 opacity-70" />
+                            <span className="text-sm">
+                                <strong>+{stats.mrrGrowth}%</strong> vs last month
+                            </span>
+                        </div>
+                    </div>
+
+                    {/* Active Investors */}
+                    <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-orange-500 to-amber-600 p-5 text-white shadow-lg">
+                        <div className="absolute top-0 right-0 -mt-4 -mr-4 h-24 w-24 rounded-full bg-white/10" />
+                        <Briefcase className="h-8 w-8 mb-3 opacity-80" />
+                        <div className="text-3xl font-bold">{formatNumber(stats.activeInvestors)}</div>
+                        <div className="text-orange-100 text-sm">Active Investors</div>
+                        <div className="mt-3 pt-3 border-t border-white/20 flex items-center gap-2">
+                            <TrendingUp className="h-4 w-4 opacity-70" />
+                            <span className="text-sm">
+                                <strong>+{stats.investorGrowth}%</strong> new investors
+                            </span>
+                        </div>
+                    </div>
+
+                    {/* Pending Verifications */}
+                    <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-yellow-500 to-amber-500 p-5 text-white shadow-lg">
+                        <div className="absolute top-0 right-0 -mt-4 -mr-4 h-24 w-24 rounded-full bg-white/10" />
+                        <Clock className="h-8 w-8 mb-3 opacity-80" />
+                        <div className="text-3xl font-bold">{formatNumber(stats.pendingVerifications)}</div>
+                        <div className="text-yellow-100 text-sm">Pending Verifications</div>
+                        <div className="mt-3 pt-3 border-t border-white/20 flex items-center gap-2">
+                            <AlertCircle className="h-4 w-4 opacity-70" />
+                            <span className="text-sm">Requires attention</span>
+                        </div>
+                    </div>
+
+                    {/* Total Funding */}
+                    <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-indigo-500 to-blue-600 p-5 text-white shadow-lg">
+                        <div className="absolute top-0 right-0 -mt-4 -mr-4 h-24 w-24 rounded-full bg-white/10" />
+                        <TrendingUp className="h-8 w-8 mb-3 opacity-80" />
+                        <div className="text-3xl font-bold">{formatCurrency(stats.totalFunding)}</div>
+                        <div className="text-indigo-100 text-sm">Total Funding Raised</div>
+                        <div className="mt-3 pt-3 border-t border-white/20 flex items-center gap-2">
+                            <span className="text-sm">Across all startups</span>
+                        </div>
+                    </div>
+
                 </div>
             )}
 
@@ -146,48 +183,86 @@ function FallbackDashboard() {
     return (
         <>
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                <KPICard
-                    title="Total Users"
-                    value={formatNumber(mockStats.totalUsers)}
-                    icon={Users}
-                    trend={mockStats.userGrowth}
-                    iconColor="text-blue-500"
-                />
-                <KPICard
-                    title="Active Startups"
-                    value={formatNumber(mockStats.activeStartups)}
-                    icon={Rocket}
-                    trend={mockStats.startupGrowth}
-                    iconColor="text-purple-500"
-                />
-                <KPICard
-                    title="Monthly Recurring Revenue"
-                    value={formatCurrency(mockStats.mrr)}
-                    icon={DollarSign}
-                    trend={mockStats.mrrGrowth}
-                    iconColor="text-emerald-500"
-                />
-                <KPICard
-                    title="Active Investors"
-                    value={formatNumber(mockStats.activeInvestors)}
-                    icon={Briefcase}
-                    trend={mockStats.investorGrowth}
-                    iconColor="text-orange-500"
-                />
-                <KPICard
-                    title="Pending Verifications"
-                    value={formatNumber(mockStats.pendingVerifications)}
-                    icon={Clock}
-                    trend={0}
-                    iconColor="text-yellow-500"
-                />
-                <KPICard
-                    title="Total Funding Raised"
-                    value={formatCurrency(mockStats.totalFunding)}
-                    icon={TrendingUp}
-                    trend={0}
-                    iconColor="text-indigo-500"
-                />
+
+                {/* Total Users - Mock */}
+                <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 p-5 text-white shadow-lg">
+                    <div className="absolute top-0 right-0 -mt-4 -mr-4 h-24 w-24 rounded-full bg-white/10" />
+                    <Users className="h-8 w-8 mb-3 opacity-80" />
+                    <div className="text-3xl font-bold">{formatNumber(mockStats.totalUsers)}</div>
+                    <div className="text-blue-100 text-sm">Total Users</div>
+                    <div className="mt-3 pt-3 border-t border-white/20 flex items-center gap-2">
+                        <TrendingUp className="h-4 w-4 opacity-70" />
+                        <span className="text-sm">
+                            <strong>+{mockStats.userGrowth}%</strong> growth this month
+                        </span>
+                    </div>
+                </div>
+
+                {/* Active Startups - Mock */}
+                <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-purple-500 to-violet-600 p-5 text-white shadow-lg">
+                    <div className="absolute top-0 right-0 -mt-4 -mr-4 h-24 w-24 rounded-full bg-white/10" />
+                    <Rocket className="h-8 w-8 mb-3 opacity-80" />
+                    <div className="text-3xl font-bold">{formatNumber(mockStats.activeStartups)}</div>
+                    <div className="text-purple-100 text-sm">Active Startups</div>
+                    <div className="mt-3 pt-3 border-t border-white/20 flex items-center gap-2">
+                        <TrendingUp className="h-4 w-4 opacity-70" />
+                        <span className="text-sm">
+                            <strong>+{mockStats.startupGrowth}%</strong> new this month
+                        </span>
+                    </div>
+                </div>
+
+                {/* MRR - Mock */}
+                <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-emerald-500 to-green-600 p-5 text-white shadow-lg">
+                    <div className="absolute top-0 right-0 -mt-4 -mr-4 h-24 w-24 rounded-full bg-white/10" />
+                    <DollarSign className="h-8 w-8 mb-3 opacity-80" />
+                    <div className="text-3xl font-bold">{formatCurrency(mockStats.mrr)}</div>
+                    <div className="text-emerald-100 text-sm">Monthly Recurring Revenue</div>
+                    <div className="mt-3 pt-3 border-t border-white/20 flex items-center gap-2">
+                        <TrendingUp className="h-4 w-4 opacity-70" />
+                        <span className="text-sm">
+                            <strong>+{mockStats.mrrGrowth}%</strong> vs last month
+                        </span>
+                    </div>
+                </div>
+
+                {/* Active Investors - Mock */}
+                <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-orange-500 to-amber-600 p-5 text-white shadow-lg">
+                    <div className="absolute top-0 right-0 -mt-4 -mr-4 h-24 w-24 rounded-full bg-white/10" />
+                    <Briefcase className="h-8 w-8 mb-3 opacity-80" />
+                    <div className="text-3xl font-bold">{formatNumber(mockStats.activeInvestors)}</div>
+                    <div className="text-orange-100 text-sm">Active Investors</div>
+                    <div className="mt-3 pt-3 border-t border-white/20 flex items-center gap-2">
+                        <TrendingUp className="h-4 w-4 opacity-70" />
+                        <span className="text-sm">
+                            <strong>+{mockStats.investorGrowth}%</strong> new investors
+                        </span>
+                    </div>
+                </div>
+
+                {/* Pending Verifications - Mock */}
+                <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-yellow-500 to-amber-500 p-5 text-white shadow-lg">
+                    <div className="absolute top-0 right-0 -mt-4 -mr-4 h-24 w-24 rounded-full bg-white/10" />
+                    <Clock className="h-8 w-8 mb-3 opacity-80" />
+                    <div className="text-3xl font-bold">{formatNumber(mockStats.pendingVerifications)}</div>
+                    <div className="text-yellow-100 text-sm">Pending Verifications</div>
+                    <div className="mt-3 pt-3 border-t border-white/20 flex items-center gap-2">
+                        <AlertCircle className="h-4 w-4 opacity-70" />
+                        <span className="text-sm">Requires attention</span>
+                    </div>
+                </div>
+
+                {/* Total Funding - Mock */}
+                <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-indigo-500 to-blue-600 p-5 text-white shadow-lg">
+                    <div className="absolute top-0 right-0 -mt-4 -mr-4 h-24 w-24 rounded-full bg-white/10" />
+                    <TrendingUp className="h-8 w-8 mb-3 opacity-80" />
+                    <div className="text-3xl font-bold">{formatCurrency(mockStats.totalFunding)}</div>
+                    <div className="text-indigo-100 text-sm">Total Funding Raised</div>
+                    <div className="mt-3 pt-3 border-t border-white/20 flex items-center gap-2">
+                        <span className="text-sm">Across all startups</span>
+                    </div>
+                </div>
+
             </div>
 
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
