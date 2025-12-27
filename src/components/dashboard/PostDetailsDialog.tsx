@@ -45,6 +45,7 @@ import {
     getPostLikes,
     getPostComments,
     getPostShares,
+    getCommentReplies,
     PostData,
     EngagementUser,
     CommentWithReplies,
@@ -241,6 +242,49 @@ export function PostDetailsDialog({
     // Comment component with replies
     const CommentItem = ({ comment, isReply = false }: { comment: CommentWithReplies; isReply?: boolean }) => {
         const [showReplies, setShowReplies] = useState(false)
+        const [replies, setReplies] = useState<CommentWithReplies[]>(comment.replies || [])
+        const [repliesPage, setRepliesPage] = useState(0)
+        const [repliesLoading, setRepliesLoading] = useState(false)
+        const [hasMoreReplies, setHasMoreReplies] = useState(false)
+
+        useEffect(() => {
+            // Check if there are more replies than what's initially loaded
+            const totalReplies = comment.replyCount || 0
+            const currentReplies = replies.length
+            setHasMoreReplies(totalReplies > currentReplies)
+        }, [comment.replyCount, replies.length])
+
+        const loadMoreReplies = async () => {
+            setRepliesLoading(true)
+            try {
+                // Determine next page index.
+                const nextPageIndex = repliesPage + 1
+                const data = await getCommentReplies(comment.id, nextPageIndex, 5)
+
+                setReplies(prev => {
+                    // Filter out duplicates just in case
+                    const newReplies = data.content.filter((newR: CommentWithReplies) => !prev.some(p => p.id === newR.id))
+                    return [...prev, ...newReplies]
+                })
+                setRepliesPage(nextPageIndex)
+                setHasMoreReplies(data.content.length > 0 && (replies.length + data.content.length < comment.replyCount))
+
+            } catch (error) {
+                toast.error('Failed to load replies')
+            } finally {
+                setRepliesLoading(false)
+            }
+        }
+
+        const handleToggleReplies = () => {
+            if (!showReplies) {
+                setShowReplies(true)
+                // If no replies loaded yet but replyCount > 0, load initial? 
+                // No, initial preview is passed in props.
+            } else {
+                setShowReplies(false)
+            }
+        }
 
         return (
             <div className={`${isReply ? 'ml-8 border-l-2 border-slate-200 dark:border-slate-700 pl-4' : ''}`}>
@@ -264,7 +308,7 @@ export function PostDetailsDialog({
 
                         {comment.replyCount > 0 && !isReply && (
                             <button
-                                onClick={() => setShowReplies(!showReplies)}
+                                onClick={handleToggleReplies}
                                 className="flex items-center gap-1 text-xs text-indigo-600 dark:text-indigo-400 mt-2 hover:underline"
                             >
                                 <Reply className="h-3 w-3" />
@@ -275,11 +319,22 @@ export function PostDetailsDialog({
                     </div>
                 </div>
 
-                {showReplies && comment.replies && (
+                {showReplies && (
                     <div className="space-y-0">
-                        {comment.replies.map(reply => (
+                        {replies.map(reply => (
                             <CommentItem key={reply.id} comment={reply} isReply />
                         ))}
+
+                        {hasMoreReplies && (
+                            <button
+                                onClick={loadMoreReplies}
+                                disabled={repliesLoading}
+                                className="ml-12 mt-2 text-xs font-medium text-slate-500 hover:text-indigo-600 flex items-center gap-1"
+                            >
+                                {repliesLoading && <Loader2 className="h-3 w-3 animate-spin" />}
+                                View more replies...
+                            </button>
+                        )}
                     </div>
                 )}
             </div>

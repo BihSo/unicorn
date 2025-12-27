@@ -217,3 +217,17 @@ export async function getPostShares(
     });
     return response.data;
 }
+
+/**
+ * Get paginated replies for a comment (Lazy Loading).
+ */
+export async function getCommentReplies(
+    commentId: string,
+    page: number = 0,
+    size: number = 10
+): Promise<PagedResponse<CommentWithReplies>> {
+    const response = await api.get(`/admin/feed/comments/${commentId}/replies`, {
+        params: { page, size }
+    });
+    return response.data;
+}

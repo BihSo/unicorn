@@ -255,4 +255,25 @@ public class AdminFeedController {
 
         return ResponseEntity.ok(response);
     }
+
+    /**
+     * Get paginated replies for a comment.
+     */
+    @GetMapping("/comments/{commentId}/replies")
+    public ResponseEntity<Map<String, Object>> getCommentReplies(
+            @PathVariable UUID commentId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+
+        Pageable pageable = PageRequest.of(page, size);
+        var replies = feedService.getCommentReplies(commentId, pageable);
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("content", replies.getContent());
+        response.put("totalElements", replies.getTotalElements());
+        response.put("totalPages", replies.getTotalPages());
+        response.put("currentPage", replies.getNumber());
+
+        return ResponseEntity.ok(response);
+    }
 }

@@ -821,17 +821,35 @@ public class FeedService {
     }
 
     /**
-     * Convert Comment to CommentWithRepliesResponse with nested replies.
+     * Get paginated replies for a comment.
+     */
+    public Page<CommentWithRepliesResponse> getCommentReplies(UUID commentId, Pageable pageable) {
+        Page<Comment> replies = commentRepository.findRepliesByParentId(commentId, pageable);
+        return replies.map(this::toCommentWithRepliesResponse);
+    }
+
+    /**
+     * Convert Comment to CommentWithRepliesResponse with limited nested replies
+     * (Preview).
      */
     private CommentWithRepliesResponse toCommentWithRepliesResponse(Comment comment) {
         User author = userRepository.findById(comment.getAuthorId()).orElse(null);
         Subscription subscription = author != null ? subscriptionService.getActiveSubscription(author.getId()) : null;
 
-        // Get replies for this comment
-        List<Comment> replies = commentRepository.findRepliesByParentId(comment.getId());
-        List<CommentWithRepliesResponse> repliesResponse = replies.stream()
-                .map(this::toCommentWithRepliesResponse)
-                .collect(Collectors.toList());
+        // Count total replies
+        long totalReplies = commentRepository.countByParentIdAndIsDeletedFalse(comment.getId());
+
+        // Get initial preview of replies (e.g., first 5)
+        // We only fetch replies if it's a top-level comment (parentId is null) to avoid
+        // deep recursion if we ever support multi-level
+        List<CommentWithRepliesResponse> repliesResponse = new ArrayList<>();
+        if (comment.getParentId() == null && totalReplies > 0) {
+            Pageable previewPage = PageRequest.of(0, 5); // Limit initial replies to 5
+            Page<Comment> replies = commentRepository.findRepliesByParentId(comment.getId(), previewPage);
+            repliesResponse = replies.stream()
+                    .map(this::toCommentWithRepliesResponse)
+                    .collect(Collectors.toList());
+        }
 
         return CommentWithRepliesResponse.builder()
                 .id(comment.getId())
@@ -845,7 +863,7 @@ public class FeedService {
                 .authorAvatarUrl(author != null ? author.getAvatarUrl() : null)
                 .authorPlan(subscription != null ? subscription.getPlanType().name() : "FREE")
                 .replies(repliesResponse)
-                .replyCount(repliesResponse.size())
+                .replyCount((int) totalReplies) // Cast simply for DTO, though long is better
                 .build();
     }
 }
