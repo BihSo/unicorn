@@ -26,7 +26,7 @@ export function Header() {
                     {pathSegments.length === 0 && (
                         <Link
                             to="/"
-                            className="text-sm font-medium text-slate-500 hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400 transition-colors"
+                            className="text-sm font-semibold text-slate-800 dark:text-slate-100 hover:text-blue-600 dark:hover:text-blue-400 transition-colors px-3 py-1 rounded-lg bg-slate-100/80 dark:bg-slate-700/50"
                         >
                             Dashboard
                         </Link>
